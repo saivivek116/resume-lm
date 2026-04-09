@@ -94,7 +94,7 @@ export interface Resume {
     [key: string]: { visible: boolean };
   };
   has_cover_letter: boolean;
-  cover_letter?: Record<string, unknown> | null;
+  cover_letter?: CoverLetterData | null;
 }
 
 export interface ResumeSummary {
@@ -145,6 +145,21 @@ export interface DocumentSettings {
 
   show_ubc_footer?: boolean;
   footer_width?: number; // Percentage width of the footer
+}
+
+export interface CoverLetterDocumentSettings {
+  font_size: number;           // default 11, range 9-13
+  line_height: number;         // default 1.4, range 1-2
+  margin_vertical: number;     // default 72 (1in), range 36-108
+  margin_horizontal: number;   // default 72 (1in), range 36-108
+  header_name_size: number;    // default 24, range 14-36
+  paragraph_spacing: number;   // default 12, range 4-24
+}
+
+export interface CoverLetterData {
+  content: string;
+  lastUpdated?: string;
+  document_settings?: CoverLetterDocumentSettings;
 }
 
 export interface Profile {

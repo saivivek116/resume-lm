@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getResumeById } from "@/utils/actions/resumes/actions";
 import { ResumeEditorClient } from "@/components/resume/editor/resume-editor-client";
 import { Metadata } from "next";
-import { Resume } from "@/lib/types";
+import { Resume, CoverLetterDocumentSettings } from "@/lib/types";
 
 const getResumePageData = cache(async (resumeId: string) => {
   return getResumeById(resumeId);
@@ -28,6 +28,19 @@ function normalizeResumeData(resume: Resume): Resume {
       ...project,
       date: project.date || ''
     })) || [],
+    // Initialize document settings with defaults if not present
+    // Initialize cover letter document settings if cover letter exists but settings are missing
+    cover_letter: resume.cover_letter ? {
+      ...resume.cover_letter,
+      document_settings: resume.cover_letter.document_settings || {
+        font_size: 11,
+        line_height: 1.4,
+        margin_vertical: 72,
+        margin_horizontal: 72,
+        header_name_size: 24,
+        paragraph_spacing: 12,
+      } as CoverLetterDocumentSettings,
+    } : resume.cover_letter,
     // Initialize document settings with defaults if not present
     document_settings: resume.document_settings || {
       document_font_size: 10,

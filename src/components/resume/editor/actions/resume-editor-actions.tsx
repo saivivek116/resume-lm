@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { pdf } from '@react-pdf/renderer';
 import { TextImport } from "../../text-import";
 import { ResumePDFDocument } from "../preview/resume-pdf-document";
+import { CoverLetterPDFDocument } from "@/components/cover-letter/cover-letter-pdf-document";
 import { cn } from "@/lib/utils";
 import { useResumeContext } from "../resume-editor-context";
 
@@ -128,36 +129,15 @@ export function ResumeEditorActions({
 
                     // Download Cover Letter if selected and exists
                     if (downloadOptions.coverLetter && resume.has_cover_letter) {
-                      // Dynamically import html2pdf only when needed
-                      const html2pdf = (await import('html2pdf.js')).default;
-                      
-                      const coverLetterElement = document.getElementById('cover-letter-content');
-                      if (!coverLetterElement) {
-                        throw new Error('Cover letter content not found');
-                      }
-
-                      const opt = {
-                        margin: [0, 0, -0.5, 0],
-                        filename: `${resume.first_name}_${resume.last_name}_Cover_Letter.pdf`,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: {
-                          backgroundColor: 'red',
-                          useCORS: true,
-                          letterRendering: true,
-                          // width: 700,
-                          // height: 1000,
-                          // windowWidth: 700,
-                          logging: true,
-                          // windowHeight: 2000
-                        },
-                        jsPDF: { 
-                          unit: 'in', 
-                          format: 'letter', 
-                          orientation: 'portrait' 
-                        }
-                      };
-
-                      await html2pdf().set(opt).from(coverLetterElement).save();
+                      const clBlob = await pdf(<CoverLetterPDFDocument resume={resume} />).toBlob();
+                      const clUrl = URL.createObjectURL(clBlob);
+                      const clLink = document.createElement('a');
+                      clLink.href = clUrl;
+                      clLink.download = `${resume.first_name}_${resume.last_name}_Cover_Letter.pdf`;
+                      document.body.appendChild(clLink);
+                      clLink.click();
+                      document.body.removeChild(clLink);
+                      URL.revokeObjectURL(clUrl);
                     }
 
                     toast({

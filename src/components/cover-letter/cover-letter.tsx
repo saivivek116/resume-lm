@@ -1,34 +1,30 @@
 import CoverLetterEditor from "./cover-letter-editor";
-import { useRef, useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useResumeContext } from '@/components/resume/editor/resume-editor-context';
-import { sanitizeRichTextHtml } from '@/lib/html-safety';
 
 
 interface CoverLetterProps {
     containerWidth: number;
-    
+
 }
 
 export default function CoverLetter({ containerWidth }: CoverLetterProps) {
   const { state, dispatch } = useResumeContext();
-  const contentRef = useRef<HTMLDivElement>(null);
-  const sanitizedCoverLetterContent = useMemo(
-    () => sanitizeRichTextHtml((state.resume.cover_letter?.content as string) || ''),
-    [state.resume.cover_letter?.content]
-  );
 
   const handleContentChange = useCallback((data: Record<string, unknown>) => {
+    const coverLetterData: import('@/lib/types').CoverLetterData = {
+      ...state.resume.cover_letter,
+      content: data.content as string,
+      lastUpdated: new Date().toISOString(),
+    };
     dispatch({
       type: 'UPDATE_FIELD',
       field: 'cover_letter',
-      value: {
-        content: data.content,
-        lastUpdated: new Date().toISOString()
-      }
+      value: coverLetterData
     });
-  }, [dispatch]);
+  }, [dispatch, state.resume.cover_letter]);
 
 
   if (!state.resume.has_cover_letter) {
@@ -53,36 +49,14 @@ export default function CoverLetter({ containerWidth }: CoverLetterProps) {
 
   return (
     <div className="">
-      {/* Print version */}
-      <div 
-        ref={contentRef} 
-        id="cover-letter-content"
-        className="absolute -left-[9999px] w-[816px]"
-      >
-        <div 
-          className="p-16 prose prose-sm !max-w-none"
-          dangerouslySetInnerHTML={{ __html: sanitizedCoverLetterContent }} 
-        />
-      </div>
-      
       {/* Interactive editor */}
       <div className="[&_.print-hidden]:hidden">
-        <CoverLetterEditor 
+        <CoverLetterEditor
           initialData={{ content: state.resume.cover_letter?.content || '' }}
           onChange={handleContentChange}
           containerWidth={containerWidth}
         />
       </div>
-      
-      {/* <Button
-        variant="outline"
-        size="sm"
-        className="w-full border-blue-600/50 text-blue-700 hover:bg-blue-50"
-        onClick={handleExportPDF}
-      >
-        <Download className="h-4 w-4 mr-2" />
-        Export as PDF
-      </Button> */}
     </div>
   );
 }

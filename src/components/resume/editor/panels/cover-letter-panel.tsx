@@ -1,5 +1,6 @@
-import { Resume, Job } from "@/lib/types";
+import { Resume, Job, CoverLetterDocumentSettings } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { FileText, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
 import { cn, withBasePath } from "@/lib/utils";
 import { useState } from 'react';
@@ -10,6 +11,8 @@ import { generate } from "@/utils/actions/cover-letter/actions";
 import { useResumeContext } from "../resume-editor-context";
 import { ApiErrorDialog } from "@/components/ui/api-error-dialog";
 import { CreateTailoredResumeDialog } from "@/components/resume/management/dialogs/create-tailored-resume-dialog";
+import { CoverLetterSettingsForm } from "@/components/cover-letter/cover-letter-settings-form";
+import { DEFAULT_COVER_LETTER_SETTINGS } from "@/components/cover-letter/cover-letter-pdf-document";
 
 
 interface CoverLetterPanelProps {
@@ -93,7 +96,9 @@ export function CoverLetterPanel({
         // console.log('Generated Content:', generatedContent);
         updateField('cover_letter', {
           content: generatedContent,
-        });
+          lastUpdated: resume.cover_letter?.lastUpdated,
+          document_settings: resume.cover_letter?.document_settings,
+        } as import('@/lib/types').CoverLetterData);
       }
       
       
@@ -223,6 +228,28 @@ export function CoverLetterPanel({
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Cover Letter
             </Button>
+          </div>
+
+          {/* Document Settings */}
+          <div className="pt-2 border-t border-emerald-200/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Label className="text-sm font-semibold text-emerald-800">Document Settings</Label>
+            </div>
+            <CoverLetterSettingsForm
+              settings={resume.cover_letter?.document_settings ?? DEFAULT_COVER_LETTER_SETTINGS}
+              onChange={(newSettings: CoverLetterDocumentSettings) => {
+                const updated: import('@/lib/types').CoverLetterData = {
+                  content: resume.cover_letter?.content || '',
+                  lastUpdated: resume.cover_letter?.lastUpdated,
+                  document_settings: newSettings,
+                };
+                dispatch({
+                  type: 'UPDATE_FIELD',
+                  field: 'cover_letter',
+                  value: updated,
+                });
+              }}
+            />
           </div>
         </div>
       ) : (

@@ -4,21 +4,54 @@ import { Resume } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ResumePreview } from "../preview/resume-preview";
-import CoverLetter from "@/components/cover-letter/cover-letter";
+import { CoverLetterPreview } from "@/components/cover-letter/cover-letter-preview";
+import { CoverLetterContextMenu } from "@/components/cover-letter/cover-letter-context-menu";
 import { ResumeContextMenu } from "../preview/resume-context-menu";
+import { pdf } from '@react-pdf/renderer';
+import { CoverLetterPDFDocument } from "@/components/cover-letter/cover-letter-pdf-document";
+import { toast } from "@/hooks/use-toast";
 
 interface PreviewPanelProps {
   resume: Resume;
   onResumeChange: (field: keyof Resume, value: Resume[keyof Resume]) => void;
   width: number;
-  // percentWidth: number;
 }
 
 export function PreviewPanel({
   resume,
-  // onResumeChange,
   width
 }: PreviewPanelProps) {
+  const handleDownloadCoverLetterPDF = async () => {
+    try {
+      const blob = await pdf(<CoverLetterPDFDocument resume={resume} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${resume.first_name}_${resume.last_name}_Cover_Letter.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: "Download started", description: "Your cover letter is being downloaded." });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Download failed", description: "Unable to download cover letter.", variant: "destructive" });
+    }
+  };
+
+  const handleCopyCoverLetterToClipboard = async () => {
+    try {
+      const content = resume.cover_letter?.content || '';
+      // Strip HTML tags to get plain text
+      const plainText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+      await navigator.clipboard.writeText(plainText);
+      toast({ title: "Copied!", description: "Cover letter copied to clipboard." });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Copy failed", description: "Unable to copy cover letter.", variant: "destructive" });
+    }
+  };
+
   return (
     <ScrollArea className={cn(
       "z-50 h-full",
@@ -32,20 +65,14 @@ export function PreviewPanel({
         </ResumeContextMenu>
       </div>
 
-      <CoverLetter 
-        // resumeId={resume.id} 
-        // hasCoverLetter={resume.has_cover_letter}
-        // coverLetterData={resume.cover_letter}
-        containerWidth={width}
-        // onCoverLetterChange={(data: Record<string, unknown>) => {
-        //   if ('has_cover_letter' in data) {
-        //     onResumeChange('has_cover_letter', data.has_cover_letter as boolean);
-        //   }
-        //   if ('cover_letter' in data) {    
-        //     onResumeChange('cover_letter', data.cover_letter as Record<string, unknown>);
-        //   }
-        // }}
-      />
+      {resume.has_cover_letter && resume.cover_letter?.content && (
+        <CoverLetterContextMenu
+          onDownloadPDF={handleDownloadCoverLetterPDF}
+          onCopyToClipboard={handleCopyCoverLetterToClipboard}
+        >
+          <CoverLetterPreview resume={resume} containerWidth={width} />
+        </CoverLetterContextMenu>
+      )}
     </ScrollArea>
   );
-} 
+}

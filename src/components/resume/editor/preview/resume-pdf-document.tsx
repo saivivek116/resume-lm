@@ -97,7 +97,7 @@ const HeaderSection = memo(function HeaderSection({
         {resume.website && (
           <>
             <Link src={resume.website.startsWith('http') ? resume.website : `https://${resume.website}`}>
-              <Text style={styles.link}>{resume.website}</Text>
+              <Text style={styles.link}>{"Website"}</Text>
             </Link>
             {(resume.linkedin_url || resume.github_url) && (
               <Text style={styles.bulletSeparator}>•</Text>
@@ -107,14 +107,14 @@ const HeaderSection = memo(function HeaderSection({
         {resume.linkedin_url && (
           <>
             <Link src={resume.linkedin_url.startsWith('http') ? resume.linkedin_url : `https://${resume.linkedin_url}`}>
-              <Text style={styles.link}>{resume.linkedin_url}</Text>
+              <Text style={styles.link}>{"LinkedIn"}</Text>
             </Link>
             {resume.github_url && <Text style={styles.bulletSeparator}>•</Text>}
           </>
         )}
         {resume.github_url && (
           <Link src={resume.github_url.startsWith('http') ? resume.github_url : `https://${resume.github_url}`}>
-            <Text style={styles.link}>{resume.github_url}</Text>
+            <Text style={styles.link}>{"GitHub"}</Text>
           </Link>
         )}
       </View>
@@ -345,7 +345,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     // Base page configuration
     page: {
       paddingTop: document_margin_vertical,
-      paddingBottom: document_margin_vertical + 28,
+      paddingBottom: document_margin_vertical,
       paddingLeft: document_margin_horizontal,
       paddingRight: document_margin_horizontal,
       fontFamily: 'Helvetica',
@@ -456,8 +456,8 @@ function createResumeStyles(settings: Resume['document_settings'] = {
       fontSize: document_font_size,
       marginBottom: experience_item_spacing,
       color: '#111827',
-      marginLeft: 8,
-      paddingLeft: 8,
+      marginLeft: 4,
+      paddingLeft: 0,
       flexDirection: 'row',
     },
     bulletText: {
@@ -565,7 +565,15 @@ export const ResumePDFDocument = memo(function ResumePDFDocument({ resume }: Res
   const styles = useMemo(() => createResumeStyles(resume.document_settings), [resume.document_settings]);
 
   return (
-    <PDFDocument>
+    <PDFDocument
+      title={`${resume.first_name} ${resume.last_name} - Resume`}
+      author={`${resume.first_name} ${resume.last_name}`}
+      subject={resume.target_role ? `Resume for ${resume.target_role}` : 'Professional Resume'}
+      keywords={resume.skills?.map(s => s.items.join(', ')).join(', ')}
+      creator={`${resume.first_name} ${resume.last_name}`}
+      producer={`${resume.first_name} ${resume.last_name}`}
+      language="en"
+    >
       <PDFPage size="LETTER" style={styles.page}>
         <HeaderSection resume={resume} styles={styles} />
         <SkillsSection skills={resume.skills} styles={styles} />

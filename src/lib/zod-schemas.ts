@@ -2,82 +2,82 @@ import { z } from "zod";
 
 // Base schemas for reusable components
 export const workExperienceSchema = z.object({
-  company: z.string().optional(),
-  position: z.string().optional(),
-  location: z.string().optional(),
-  date: z.string().optional(),
-  description: z.array(z.string()).optional(),
-  technologies: z.array(z.string()).optional(),
+  company: z.string(),
+  position: z.string(),
+  location: z.string(),
+  date: z.string(),
+  description: z.array(z.string()),
+  technologies: z.array(z.string()),
 });
 
 export const educationSchema = z.object({
-  school: z.string().optional(),
-  degree: z.string().optional(),
-  field: z.string().optional(),
-  location: z.string().optional(),
-  date: z.string().optional(),
-  gpa: z.string().optional(),
-  achievements: z.array(z.string()).optional(),
+  school: z.string(),
+  degree: z.string(),
+  field: z.string(),
+  location: z.string(),
+  date: z.string(),
+  gpa: z.string(),
+  achievements: z.array(z.string()),
 });
 
 export const projectSchema = z.object({
-  name: z.string().optional(),
-  description: z.array(z.string()).optional(),
-  date: z.string().optional(),
-  technologies: z.array(z.string()).optional(),
-  url: z.string().optional(),
-  github_url: z.string().optional(),
+  name: z.string(),
+  description: z.array(z.string()),
+  date: z.string(),
+  technologies: z.array(z.string()),
+  url: z.string(),
+  github_url: z.string(),
 });
 
 export const skillSchema = z.object({
-  category: z.string().optional(),
-  items: z.array(z.string()).optional(),
+  category: z.string(),
+  items: z.array(z.string()),
 });
 
 
 // Schema for text import functionality
 export const textImportSchema = z.object({
   // Basic Information
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  email: z.string().optional(),
-  phone_number: z.string().optional(),
-  location: z.string().optional(),
-  website: z.string().optional(),
-  linkedin_url: z.string().optional(),
-  github_url: z.string().optional(),
-  
+  first_name: z.string().nullable(),
+  last_name: z.string().nullable(),
+  email: z.string().nullable(),
+  phone_number: z.string().nullable(),
+  location: z.string().nullable(),
+  website: z.string().nullable(),
+  linkedin_url: z.string().nullable(),
+  github_url: z.string().nullable(),
+
   // Resume Sections
   work_experience: z.array(z.object({
     company: z.string(),
     position: z.string(),
     date: z.string(),
     description: z.array(z.string()),
-    technologies: z.array(z.string()).optional(),
-    location: z.string().optional(),
-  })).optional(),
+    technologies: z.array(z.string()).nullable(),
+    location: z.string().nullable(),
+  })).nullable(),
   education: z.array(z.object({
     school: z.string(),
     degree: z.string(),
-    field: z.string().optional(),
-    date: z.string().optional(),
-    description: z.array(z.string()).optional(),
-    gpa: z.string().optional(),
-    location: z.string().optional(),
-    achievements: z.array(z.string()).optional(),
-  })).optional(),
+    field: z.string().nullable(),
+    date: z.string().nullable(),
+    description: z.array(z.string()).nullable(),
+    gpa: z.string().nullable(),
+    location: z.string().nullable(),
+    achievements: z.array(z.string()).nullable(),
+  })).nullable(),
   skills: z.array(z.object({
     category: z.string(),
     items: z.array(z.string()),
-  })).optional(),
+  })).nullable(),
   projects: z.array(z.object({
     name: z.string(),
     description: z.array(z.string()),
-    technologies: z.array(z.string()).optional(),
-    date: z.string().optional(),
-    url: z.string().optional(),
-    github_url: z.string().optional(),
-  })).optional(),
+    technologies: z.array(z.string()).nullable(),
+    date: z.string().nullable(),
+    url: z.string().nullable(),
+    github_url: z.string().nullable(),
+  })).nullable(),
 });
 
 export const documentSettingsSchema = z.object({
@@ -116,6 +116,21 @@ export const documentSettingsSchema = z.object({
   education_item_spacing: z.number(),
 });
 
+export const coverLetterDocumentSettingsSchema = z.object({
+  font_size: z.number(),
+  line_height: z.number(),
+  margin_vertical: z.number(),
+  margin_horizontal: z.number(),
+  header_name_size: z.number(),
+  paragraph_spacing: z.number(),
+});
+
+export const coverLetterDataSchema = z.object({
+  content: z.string(),
+  lastUpdated: z.string().optional(),
+  document_settings: coverLetterDocumentSettingsSchema.optional(),
+});
+
 export const sectionConfigSchema = z.object({
   visible: z.boolean(),
   max_items: z.number().nullable().optional(),
@@ -148,7 +163,7 @@ export const resumeSchema = z.object({
 //   section_order: z.array(z.string()).optional(),
 //   section_configs: z.record(sectionConfigSchema).optional(),
   has_cover_letter: z.boolean().default(false),
-  cover_letter: z.record(z.unknown()).nullable().optional(),
+  cover_letter: coverLetterDataSchema.nullable().optional(),
 });
 
 // Type inference helpers
@@ -182,29 +197,23 @@ export const jobSchema = z.object({
 });
 
 export const simplifiedJobSchema = z.object({
-    company_name: z.string().optional(),
-    position_title: z.string().optional(),
-    job_url: z.string().nullable().optional(),
-    description: z.string().nullable().optional(),
-    location: z.string().nullable().optional(),
-    salary_range: z.string().nullable().optional(),
-    keywords: z.array(z.string()).default([]).optional(),
-    work_location: z.preprocess(
-      (val) => val === null || val === '' ? 'in_person' : val,
-      z.enum(['remote', 'in_person', 'hybrid']).nullable().optional()
-    ),
-    employment_type: z.preprocess(
-      (val) => val === null || val === '' ? 'full_time' : val,
-      z.enum(['full_time', 'part_time', 'co_op', 'internship', 'contract'])
-    ).optional(),
-    is_active: z.boolean().default(true).optional(),
+    company_name: z.string(),
+    position_title: z.string(),
+    job_url: z.string().nullable(),
+    description: z.string().nullable(),
+    location: z.string().nullable(),
+    salary_range: z.string().nullable(),
+    keywords: z.array(z.string()),
+    work_location: z.enum(['remote', 'in_person', 'hybrid']).nullable(),
+    employment_type: z.enum(['full_time', 'part_time', 'co_op', 'internship', 'contract']),
+    is_active: z.boolean(),
   });
   
 export const simplifiedResumeSchema = z.object({
-    work_experience: z.array(workExperienceSchema).optional(),
-    education: z.array(educationSchema).optional(),
-    skills: z.array(skillSchema).optional(),
-    projects: z.array(projectSchema).optional(),
+    work_experience: z.array(workExperienceSchema),
+    education: z.array(educationSchema),
+    skills: z.array(skillSchema),
+    projects: z.array(projectSchema),
     target_role: z.string()
   });
 
@@ -306,31 +315,31 @@ export const resumeScoreSchema = z.object({
     keywordMatch: z.object({
       score: z.number().min(0).max(100),
       reason: z.string(),
-      matchedKeywords: z.array(z.string()).optional(),
-      missingKeywords: z.array(z.string()).optional()
+      matchedKeywords: z.array(z.string()),
+      missingKeywords: z.array(z.string())
     }),
     requirementsMatch: z.object({
       score: z.number().min(0).max(100),
       reason: z.string(),
-      matchedRequirements: z.array(z.string()).optional(),
-      gapAnalysis: z.array(z.string()).optional()
+      matchedRequirements: z.array(z.string()),
+      gapAnalysis: z.array(z.string())
     }),
     companyFit: z.object({
       score: z.number().min(0).max(100),
       reason: z.string(),
-      suggestions: z.array(z.string()).optional()
+      suggestions: z.array(z.string())
     })
-  }).optional(),
+  }).nullable(),
   miscellaneous: z.record(
     z.union([z.number(), z.object({
-      score: z.number().min(0).max(100).optional(),
-      reason: z.string().optional()
-    })]).optional()
-  ).optional(),
-  overallImprovements: z.array(z.string()).optional(),
+      score: z.number().min(0).max(100),
+      reason: z.string()
+    })])
+  ).nullable(),
+  overallImprovements: z.array(z.string()),
   // Job-specific improvements for tailored resumes
-  jobSpecificImprovements: z.array(z.string()).optional(),
-  isTailoredResume: z.boolean().optional()
+  jobSpecificImprovements: z.array(z.string()),
+  isTailoredResume: z.boolean()
 });
 
 export type ResumeScoreMetrics = z.infer<typeof resumeScoreSchema>; 

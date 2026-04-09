@@ -22,11 +22,18 @@ export function ProfileProjectsForm({ projects, onChange }: ProfileProjectsFormP
   const [techInputs, setTechInputs] = React.useState<{ [key: number]: string }>(
     Object.fromEntries(projects.map((p, i) => [i, p.technologies?.join(', ') || '']))
   );
+  const focusedTechIndex = React.useRef<number | null>(null);
 
   React.useEffect(() => {
-    setTechInputs(Object.fromEntries(
-      projects.map((p, i) => [i, p.technologies?.join(', ') || ''])
-    ));
+    setTechInputs(prev => {
+      const next = { ...prev };
+      projects.forEach((p, i) => {
+        if (i !== focusedTechIndex.current) {
+          next[i] = p.technologies?.join(', ') || '';
+        }
+      });
+      return next;
+    });
   }, [projects]);
 
   const addProject = () => {
@@ -149,32 +156,21 @@ export function ProfileProjectsForm({ projects, onChange }: ProfileProjectsFormP
                   <Input
                     value={techInputs[index] || ''}
                     onChange={(e) => {
-                      const newValue = e.target.value;
-                      setTechInputs(prev => ({ ...prev, [index]: newValue }));
-                      
-                      if (newValue.endsWith(',')) {
-                        const technologies = newValue
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(Boolean);
-                        updateProject(index, 'technologies', technologies);
-                      } else {
-                        const technologies = newValue
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(Boolean);
-                        updateProject(index, 'technologies', technologies);
-                      }
+                      setTechInputs(prev => ({ ...prev, [index]: e.target.value }));
+                    }}
+                    onFocus={() => {
+                      focusedTechIndex.current = index;
                     }}
                     onBlur={(e) => {
+                      focusedTechIndex.current = null;
                       const technologies = e.target.value
                         .split(',')
                         .map(t => t.trim())
                         .filter(Boolean);
                       updateProject(index, 'technologies', technologies);
-                      setTechInputs(prev => ({ 
-                        ...prev, 
-                        [index]: technologies.join(', ') 
+                      setTechInputs(prev => ({
+                        ...prev,
+                        [index]: technologies.join(', ')
                       }));
                     }}
                     placeholder="React, TypeScript, Node.js, etc."

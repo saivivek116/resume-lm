@@ -43,11 +43,18 @@ export function ProfileWorkExperienceForm({ experiences, onChange }: ProfileWork
   const [techInputs, setTechInputs] = React.useState<{ [key: number]: string }>(
     Object.fromEntries(experiences.map((exp, i) => [i, exp.technologies?.join(', ') || '']))
   );
+  const focusedTechIndex = React.useRef<number | null>(null);
 
   React.useEffect(() => {
-    setTechInputs(Object.fromEntries(
-      experiences.map((exp, i) => [i, exp.technologies?.join(', ') || ''])
-    ));
+    setTechInputs(prev => {
+      const next = { ...prev };
+      experiences.forEach((exp, i) => {
+        if (i !== focusedTechIndex.current) {
+          next[i] = exp.technologies?.join(', ') || '';
+        }
+      });
+      return next;
+    });
   }, [experiences]);
 
   return (
@@ -164,32 +171,21 @@ export function ProfileWorkExperienceForm({ experiences, onChange }: ProfileWork
                   <Input
                     value={techInputs[index] || ''}
                     onChange={(e) => {
-                      const newValue = e.target.value;
-                      setTechInputs(prev => ({ ...prev, [index]: newValue }));
-                      
-                      if (newValue.endsWith(',')) {
-                        const technologies = newValue
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(Boolean);
-                        updateExperience(index, 'technologies', technologies);
-                      } else {
-                        const technologies = newValue
-                          .split(',')
-                          .map(t => t.trim())
-                          .filter(Boolean);
-                        updateExperience(index, 'technologies', technologies);
-                      }
+                      setTechInputs(prev => ({ ...prev, [index]: e.target.value }));
+                    }}
+                    onFocus={() => {
+                      focusedTechIndex.current = index;
                     }}
                     onBlur={(e) => {
+                      focusedTechIndex.current = null;
                       const technologies = e.target.value
                         .split(',')
                         .map(t => t.trim())
                         .filter(Boolean);
                       updateExperience(index, 'technologies', technologies);
-                      setTechInputs(prev => ({ 
-                        ...prev, 
-                        [index]: technologies.join(', ') 
+                      setTechInputs(prev => ({
+                        ...prev,
+                        [index]: technologies.join(', ')
                       }));
                     }}
                     placeholder="React, TypeScript, Node.js, etc."
