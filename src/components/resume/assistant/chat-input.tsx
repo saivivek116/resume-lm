@@ -48,7 +48,7 @@ export default function ChatInput({
       <form onSubmit={handleSubmit} className={cn(
         "relative z-10",
         "p-1 border-t border-purple-200/60",
-        "bg-white/40",
+        "bg-white",
         "backdrop-blur-sm",
         "flex gap-1.5"
       )}>
@@ -71,7 +71,8 @@ export default function ChatInput({
           rows={1}
           className={cn(
             "flex-1",
-            "bg-white/60",
+            "bg-white",
+            "text-gray-900",
             "border-purple-200/60",
             "focus:border-purple-300",
             "focus:ring-2 focus:ring-purple-500/10",

@@ -222,7 +222,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
 
   const approveSuggestion = (expIndex: number, suggestion: AISuggestion) => {
     const updated = [...experiences];
-    updated[expIndex].description = [...updated[expIndex].description, suggestion.point];
+    updated[expIndex] = { ...updated[expIndex], description: [...updated[expIndex].description, suggestion.point] };
     onChange(updated);
     
     // Remove the suggestion after approval
@@ -283,7 +283,9 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
 
       // Update the experience with the improved version
       const updated = [...experiences];
-      updated[expIndex].description[pointIndex] = improvedPoint;
+      const newDesc = [...updated[expIndex].description];
+      newDesc[pointIndex] = improvedPoint;
+      updated[expIndex] = { ...updated[expIndex], description: newDesc };
       onChange(updated);
     } catch (error: Error | unknown) {
       if (error instanceof Error && (
@@ -315,7 +317,9 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     const improvedPoint = improvedPoints[expIndex]?.[pointIndex];
     if (improvedPoint) {
       const updated = [...experiences];
-      updated[expIndex].description[pointIndex] = improvedPoint.original;
+      const newDesc = [...updated[expIndex].description];
+      newDesc[pointIndex] = improvedPoint.original;
+      updated[expIndex] = { ...updated[expIndex], description: newDesc };
       onChange(updated);
       
       // Remove the improvement from state
@@ -486,7 +490,9 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                             content={desc} 
                             onChange={(newContent) => {
                               const updated = [...experiences];
-                              updated[index].description[descIndex] = newContent;
+                              const newDesc = [...updated[index].description];
+                              newDesc[descIndex] = newContent;
+                              updated[index] = { ...updated[index], description: newDesc };
                               onChange(updated);
 
                               if (improvedPoints[index]?.[descIndex]) {
@@ -584,7 +590,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                                 size="icon"
                                 onClick={() => {
                                   const updated = [...experiences];
-                                  updated[index].description = updated[index].description.filter((_, i) => i !== descIndex);
+                                  updated[index] = { ...updated[index], description: updated[index].description.filter((_, i) => i !== descIndex) };
                                   onChange(updated);
                                 }}
                                 className="p-0 group-hover/item:opacity-100 text-gray-400 hover:text-red-500 transition-all duration-300"
@@ -672,7 +678,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                       size="sm"
                       onClick={() => {
                         const updated = [...experiences];
-                        updated[index].description = [...updated[index].description, ""];
+                        updated[index] = { ...updated[index], description: [...updated[index].description, ""] };
                         onChange(updated);
                       }}
                       className={cn(

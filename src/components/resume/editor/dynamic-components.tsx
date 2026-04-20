@@ -65,11 +65,13 @@ export const ProjectsForm = dynamic(
 
 
 export const DocumentSettingsForm = dynamic(
-  () => import('./forms/document-settings-form').then(mod => ({ 
-    default: mod.DocumentSettingsForm 
-  })) as Promise<ComponentType<{ 
-    documentSettings: DocumentSettings; 
-    onChange: (field: 'document_settings', value: DocumentSettings) => void 
+  () => import('./forms/document-settings-form').then(mod => ({
+    default: mod.DocumentSettingsForm
+  })) as Promise<ComponentType<{
+    documentSettings: DocumentSettings;
+    onChange: (field: 'document_settings', value: DocumentSettings) => void;
+    profileDefaults?: DocumentSettings;
+    showSavedStyles?: boolean;
   }>>,
   {
     loading: () => <LoadingFallback lines={1} />,

@@ -147,6 +147,58 @@ export interface DocumentSettings {
   footer_width?: number; // Percentage width of the footer
 }
 
+export const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
+  document_font_size: 10,
+  document_line_height: 1.5,
+  document_margin_vertical: 36,
+  document_margin_horizontal: 36,
+  header_name_size: 24,
+  header_name_bottom_spacing: 24,
+  skills_margin_top: 2,
+  skills_margin_bottom: 2,
+  skills_margin_horizontal: 0,
+  skills_item_spacing: 2,
+  experience_margin_top: 2,
+  experience_margin_bottom: 2,
+  experience_margin_horizontal: 0,
+  experience_item_spacing: 4,
+  projects_margin_top: 2,
+  projects_margin_bottom: 2,
+  projects_margin_horizontal: 0,
+  projects_item_spacing: 4,
+  education_margin_top: 2,
+  education_margin_bottom: 2,
+  education_margin_horizontal: 0,
+  education_item_spacing: 4,
+};
+
+export const COMPACT_DOCUMENT_SETTINGS: DocumentSettings = {
+  footer_width: 0,
+  show_ubc_footer: false,
+  header_name_size: 24,
+  skills_margin_top: 0,
+  document_font_size: 10,
+  projects_margin_top: 0,
+  skills_item_spacing: 0,
+  document_line_height: 1.2,
+  education_margin_top: 0,
+  skills_margin_bottom: 2,
+  experience_margin_top: 2,
+  projects_item_spacing: 0,
+  education_item_spacing: 0,
+  projects_margin_bottom: 0,
+  education_margin_bottom: 0,
+  experience_item_spacing: 1,
+  document_margin_vertical: 20,
+  experience_margin_bottom: 0,
+  skills_margin_horizontal: 0,
+  document_margin_horizontal: 28,
+  header_name_bottom_spacing: 16,
+  projects_margin_horizontal: 0,
+  education_margin_horizontal: 0,
+  experience_margin_horizontal: 0,
+};
+
 export interface CoverLetterDocumentSettings {
   font_size: number;           // default 11, range 9-13
   line_height: number;         // default 1.4, range 1-2
@@ -178,6 +230,7 @@ export interface Profile {
   education: Education[];
   skills: Skill[];
   projects: Project[];
+  document_settings?: DocumentSettings | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,17 +1,18 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { DocumentSettings } from "@/lib/types";
+import { DocumentSettings, DEFAULT_DOCUMENT_SETTINGS, COMPACT_DOCUMENT_SETTINGS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChevronUp, ChevronDown } from "lucide-react"
 import { Switch } from "@/components/ui/switch";
 import { SavedStylesDialog } from "./saved-styles-dialog";
-import { LayoutTemplate } from "lucide-react";
+import { LayoutTemplate, RotateCcw } from "lucide-react";
 
 interface DocumentSettingsFormProps {
-  // resume: Resume;
   documentSettings: DocumentSettings;
   onChange: (field: 'document_settings', value: DocumentSettings) => void;
+  profileDefaults?: DocumentSettings;
+  showSavedStyles?: boolean;
 }
 
 interface NumberInputProps {
@@ -62,47 +63,11 @@ function NumberInput({ value, onChange, min, max, step }: NumberInputProps) {
   )
 }
 
-export function DocumentSettingsForm({ documentSettings, onChange }: DocumentSettingsFormProps) {
-
-  const defaultSettings = {
-    // Global Settings
-    document_font_size: 10,
-    document_line_height: 1.5,
-    document_margin_vertical: 36,
-    document_margin_horizontal: 36,
-
-    // Header Settings
-    header_name_size: 24,
-    header_name_bottom_spacing: 24,
-
-    // Skills Section
-    skills_margin_top: 2,
-    skills_margin_bottom: 2,
-    skills_margin_horizontal: 0,
-    skills_item_spacing: 2,
-
-    // Experience Section
-    experience_margin_top: 2,
-    experience_margin_bottom: 2,
-    experience_margin_horizontal: 0,
-    experience_item_spacing: 4,
-
-    // Projects Section
-    projects_margin_top: 2,
-    projects_margin_bottom: 2,
-    projects_margin_horizontal: 0,
-    projects_item_spacing: 4,
-
-    // Education Section
-    education_margin_top: 2,
-    education_margin_bottom: 2,
-    education_margin_horizontal: 0,
-    education_item_spacing: 4,
-  };
+export function DocumentSettingsForm({ documentSettings, onChange, profileDefaults, showSavedStyles = true }: DocumentSettingsFormProps) {
 
   // Initialize document_settings if it doesn't exist
   if (!documentSettings) {
-    onChange('document_settings', defaultSettings);
+    onChange('document_settings', DEFAULT_DOCUMENT_SETTINGS);
     return null; // Return null while initializing to prevent errors
   }
 
@@ -263,18 +228,20 @@ export function DocumentSettingsForm({ documentSettings, onChange }: DocumentSet
 
         {/* Buttons */}
         <CardHeader className="flex flex-col space-y-4">
-          <div className="flex items-center space-x-2 w-full">
-            <SavedStylesDialog
-              currentSettings={documentSettings || defaultSettings}
-              onApplyStyle={(settings) => handleSettingsChange(settings)}
-            />
-          </div>
-          
+          {showSavedStyles && (
+            <div className="flex items-center space-x-2 w-full">
+              <SavedStylesDialog
+                currentSettings={documentSettings || DEFAULT_DOCUMENT_SETTINGS}
+                onApplyStyle={(settings) => handleSettingsChange(settings)}
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4 pt-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleSettingsChange({...defaultSettings})}
+              onClick={() => handleSettingsChange({...DEFAULT_DOCUMENT_SETTINGS})}
               className="relative h-60 group p-0 overflow-hidden border-slate-200 hover:border-teal-600/40 transition-colors"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 to-cyan-50/50 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -328,33 +295,7 @@ export function DocumentSettingsForm({ documentSettings, onChange }: DocumentSet
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleSettingsChange({
-                ...documentSettings,
-                footer_width: 0,
-                show_ubc_footer: false,
-                header_name_size: 24,
-                skills_margin_top: 0,
-                document_font_size: 10,
-                projects_margin_top: 0,
-                skills_item_spacing: 0,
-                document_line_height: 1.2,
-                education_margin_top: 0,
-                skills_margin_bottom: 2,
-                experience_margin_top: 2,
-                projects_item_spacing: 0,
-                education_item_spacing: 0,
-                projects_margin_bottom: 0,
-                education_margin_bottom: 0,
-                experience_item_spacing: 1,
-                document_margin_vertical: 20,
-                experience_margin_bottom: 0,
-                skills_margin_horizontal: 0,
-                document_margin_horizontal: 28,
-                header_name_bottom_spacing: 16,
-                projects_margin_horizontal: 0,
-                education_margin_horizontal: 0,
-                experience_margin_horizontal: 0
-              })}
+              onClick={() => handleSettingsChange({...COMPACT_DOCUMENT_SETTINGS})}
               className="relative h-60 group p-0 overflow-hidden border-slate-200 hover:border-pink-600/40 transition-colors"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-pink-50/50 to-rose-50/50 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -416,6 +357,18 @@ export function DocumentSettingsForm({ documentSettings, onChange }: DocumentSet
               </div>
             </Button>
           </div>
+
+          {profileDefaults && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSettingsChange({...profileDefaults})}
+              className="w-full mt-2 border-violet-200 hover:border-violet-400 hover:bg-violet-50/50 text-violet-600 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-2" />
+              Reset to Profile Defaults
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="space-y-6 ">

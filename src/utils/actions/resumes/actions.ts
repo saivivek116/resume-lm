@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
-import { Profile, Resume, WorkExperience, Education, Skill, Project, Job } from "@/lib/types";
+import { Profile, Resume, WorkExperience, Education, Skill, Project, Job, DEFAULT_DOCUMENT_SETTINGS } from "@/lib/types";
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { simplifiedResumeSchema, Job as ZodJob } from "@/lib/zod-schemas";
@@ -269,32 +269,7 @@ export async function createBaseResume(
       skills: { visible: (selectedContent?.skills?.length ?? 0) > 0 },
       projects: { visible: (selectedContent?.projects?.length ?? 0) > 0 },
     },
-    document_settings: {
-      footer_width: 0,
-      show_ubc_footer: false,
-      header_name_size: 24,
-      skills_margin_top: 0,
-      document_font_size: 10,
-      projects_margin_top: 0,
-      skills_item_spacing: 0,
-      document_line_height: 1.2,
-      education_margin_top: 0,
-      skills_margin_bottom: 2,
-      experience_margin_top: 2,
-      projects_item_spacing: 0,
-      education_item_spacing: 0,
-      projects_margin_bottom: 0,
-      education_margin_bottom: 0,
-      experience_item_spacing: 1,
-      document_margin_vertical: 20,
-      experience_margin_bottom: 0,
-      skills_margin_horizontal: 0,
-      document_margin_horizontal: 28,
-      header_name_bottom_spacing: 16,
-      projects_margin_horizontal: 0,
-      education_margin_horizontal: 0,
-      experience_margin_horizontal: 0
-    }
+    document_settings: profile?.document_settings ?? DEFAULT_DOCUMENT_SETTINGS
   };
 
   const { data: resume, error: createError } = await supabase

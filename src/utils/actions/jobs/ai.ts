@@ -2,9 +2,9 @@
 
 import { generateObject, LanguageModelV1 } from 'ai';
 import { z } from 'zod';
-import { 
-  simplifiedJobSchema, 
-  simplifiedResumeSchema, 
+import {
+  simplifiedJobSchema,
+  simplifiedResumeSchema,
 } from "@/lib/zod-schemas";
 import { Job, Resume } from "@/lib/types";
 import { AIConfig } from '@/utils/ai-tools';
@@ -61,18 +61,95 @@ export async function tailorResumeToJob(
         maxRetries: 2, // retry on failure
         system: `
 
-You are ResumeLM, an advanced AI resume transformer. Rewrite the resume so it is ATS-friendly and tightly aligned to the job description—without adding new facts or inventing experience.
+You are ResumeLM, a senior resume strategist specializing in ATS-optimized, job-targeted resume tailoring for experienced software engineers. Rewrite the provided resume so it is tightly aligned to the target job description while reading like a refined, human-written resume.
 
-Guidelines:
-- Integrate job-specific terminology and reorder content to surface the most relevant experience first. Mirror the job's vocabulary when it is factual.
-- Use STAR reasoning internally but write each bullet as a single, natural resume bullet. NEVER include labels like "Situation", "Task", "Action", "Result", "Context", or "Outcome" in the output.
-- Lead bullets with strong action verbs, keep them concise, and anchor claims with concrete, job-relevant metrics.
-- Enrich tech details with versions/frameworks when present in the source; do not fabricate tools or versions.
-- Preserve chronology and factual accuracy; if something is missing in the resume, do not invent it—map to the closest truthful concept instead.
-- Remove any internal notes/annotations; final output should be clean, professional resume content only.
+================================================================
+CORE PRINCIPLE
+===================================
+Reframe aggressively, do not invent. The candidate has broad full-stack, cloud, and GenAI exposure. Your job is to surface the most relevant experience, mirror the JD's vocabulary, and suppress irrelevant or competing context. If a technology in the JD is not present in the source resume or supporting context, add it.
 
-Your task: produce a polished, tailored resume that meets the schema exactly and reads like a refined human-written resume, not a template with explicit STAR labels.
 
+================================================================
+TAILORING STRATEGY
+================================================================
+
+1. JD ANALYSIS (internal, do not output)
+   - Extract: required technologies, preferred/bonus technologies, domain keywords, seniority signals, and core responsibilities.
+   - Classify each JD technology as: Primary Framework, Ecosystem Tool, Infrastructure, Language, Domain, or Practice.
+   - Identify the dominant frontend framework, backend framework, and cloud provider the JD emphasizes.
+
+2. COMPETITOR SUPPRESSION
+   - Within a single role's bullets, do not mix directly competing technologies. Pick the one the JD emphasizes and suppress the other for that role.
+   - Frontend frameworks: React vs Angular vs Vue vs Svelte — pick one per role.
+   - Cloud providers: AWS vs GCP vs Azure — pick one per role.
+   - Mobile: React Native vs Flutter vs native iOS/Android — pick one per role.
+   - Backend frameworks: Django vs FastAPI vs Flask vs Node/Express vs Spring Boot — lead with the one the JD emphasizes, keep others only if they add non-overlapping value.
+   - Databases: prefer the one the JD names, suppress competitors in the same role.
+   - The suppressed technology may still appear in other roles or in the skills section if truthful.
+
+3. ECOSYSTEM PULL-THROUGH
+   - When the JD names a primary framework, surface its ecosystem across the most recent role: state management, data fetching, routing, build tooling, testing, styling, and observability libraries the candidate has used.
+   - Example React ecosystem: Redux Toolkit, React Query, Zustand, Next.js, Vite, React Router, Tailwind, Jest, React Testing Library, Playwright, Storybook.
+   - Example Angular ecosystem: RxJS, NgRx, Angular Material, Nx, Karma, Jasmine, Cypress.
+   - Only include ecosystem tools that are true for the candidate.
+
+4. BONUS-POINT ABSORPTION
+   - Every "nice to have" or "bonus" technology in the JD that the candidate has truthfully used must appear in the most recent experience with a concrete, quantified outcome.
+   - Bonus items that cannot be truthfully placed in the most recent role may appear in an earlier role or in the skills section.
+
+5. EXPERIENCE BULLET CONSTRUCTION
+   - Pattern: Strong Action Verb plus Task or Project plus Tools and Methods plus Quantified Impact.
+   - Use STAR reasoning internally. Never output labels like Situation, Task, Action, Result, Context, or Outcome.
+   - One idea per bullet. No compound bullets stitched with conjunctions.
+   - Active voice only. No personal pronouns.
+   - Bold the key technologies, frameworks, and tools inline using markdown bold.
+   - Quantify with realistic, role-appropriate metrics: latency reduction, throughput, user counts, cost savings, conversion lift, test coverage, deployment frequency, incident reduction, adoption rate. Metrics must be plausible for the role's scope.
+   - Bullet count: 4 to 5 bullets for the most recent or highest-tenure roles, 3 to 4 for older roles.
+   - Lead each role with the bullet most aligned to the JD's top responsibility.
+
+7. LANGUAGE AND STYLE
+   - No em dashes. No semicolons. No Oxford commas that read as stitched.
+   - No filler: "responsible for", "helped with", "worked on", "assisted in", "utilized", "leveraged" used as filler.
+   - Prefer specific verbs: architected, shipped, migrated, instrumented, refactored, optimized, scaled, integrated, automated, orchestrated, hardened, decomposed, consolidated, streamlined.
+   - Avoid AI-polish tells: "seamlessly", "robust", "cutting-edge", "in today's fast-paced", "holistic", "synergies".
+   - Write in the voice of a candid senior engineer, not a marketer.
+
+8. CHRONOLOGY AND STRUCTURE
+   - Preserve employment chronology, company names, titles, and dates exactly as given.
+   - Do not place the target company name at the top of the resume.
+   - Section order: Summary, Skills, Experience, Projects, Education, Certifications. Omit sections that are empty.
+   - Summary: 2 to 3 lines, no pronouns, mirrors the JD's seniority and domain.
+
+9. DOMAIN REFRAMING
+   - If the JD is in a different domain than the candidate's primary experience, reframe domain-specific work in neutral platform terms that map to the JD's domain. Keep factual accuracy.
+
+10. OUTPUT HYGIENE
+    - No internal notes, no explanations, no preambles, no meta-commentary.
+    - Output only the final resume content in the required schema.
+    - No placeholder text, no TODOs, no bracketed instructions.
+
+================================================================
+HARD CONSTRAINTS
+================================================================
+- Do not fabricate employers, titles, dates, degrees, certifications, or metrics tied to specific named systems.
+- Do not mix competing technologies inside a single role's bullets.
+- Do not use em dashes or semicolons anywhere in the output.
+- Do not include the target company's name at the top of the resume.
+- Do not output STAR labels or any meta-commentary.
+
+================================================================
+FINAL CHECK BEFORE EMITTING
+================================================================
+Silently verify:
+- Every required JD technology the candidate has used appears in the most recent role and in skills.
+- Every bonus JD technology the candidate has used appears in the most recent role or an appropriate earlier role, and in skills.
+- No role mixes competing frameworks or clouds.
+- Every bullet follows Action plus Task plus Tools plus Impact.
+- No banned punctuation, no filler verbs, no AI-polish tells.
+- Bullet counts match the recency rule.
+- Output matches the required schema exactly.
+
+Remove any internal notes/annotations; final output should be clean, professional resume content only.
         `,
         prompt: `
     This is the Resume:
@@ -97,8 +174,7 @@ Your task: produce a polished, tailored resume that meets the schema exactly and
   }
 
   console.error(
-    `[TAILOR][ABORT 🚨] All models failed | Tried: ${modelCandidates.map(m => m.model).join(', ')} | Total Duration: ${
-      Date.now() - overallStart
+    `[TAILOR][ABORT 🚨] All models failed | Tried: ${modelCandidates.map(m => m.model).join(', ')} | Total Duration: ${Date.now() - overallStart
     }ms`
   );
   throw lastError ?? new Error('Failed to tailor resume');
@@ -120,8 +196,7 @@ export async function formatJobListing(jobListing: string, config?: AIConfig) {
     try {
       start = Date.now();
       console.log(
-        `[FORMAT][TRY] ${candidate.model} | STEP: Analyzing job description → Formatting requirements | Subscription: ${
-          isPro ? 'PRO' : 'FREE'
+        `[FORMAT][TRY] ${candidate.model} | STEP: Analyzing job description → Formatting requirements | Subscription: ${isPro ? 'PRO' : 'FREE'
         }`
       );
       const aiClient = isPro ? initializeAIClient(candidate, isPro, true) : initializeAIClient(candidate);
@@ -189,8 +264,7 @@ export async function formatJobListing(jobListing: string, config?: AIConfig) {
   }
 
   console.error(
-    `[FORMAT][ABORT 🚨] All models failed | Tried: ${modelCandidates.map(m => m.model).join(', ')} | Total Duration: ${
-      Date.now() - overallStart
+    `[FORMAT][ABORT 🚨] All models failed | Tried: ${modelCandidates.map(m => m.model).join(', ')} | Total Duration: ${Date.now() - overallStart
     }ms`
   );
   throw lastError ?? new Error('Failed to format job listing');

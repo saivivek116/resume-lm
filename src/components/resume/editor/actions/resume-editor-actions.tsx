@@ -120,7 +120,11 @@ export function ResumeEditorActions({
                       const url = URL.createObjectURL(blob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = `${resume.first_name}_${resume.last_name}_Resume.pdf`;
+                      const resumeRole = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
+                      const resumeCompany = !resume.is_base_resume && resume.name?.includes(' at ')
+                        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
+                        : '';
+                      link.download = `${resume.first_name}_${resume.last_name}${resumeRole}${resumeCompany}_Resume.pdf`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
@@ -133,7 +137,11 @@ export function ResumeEditorActions({
                       const clUrl = URL.createObjectURL(clBlob);
                       const clLink = document.createElement('a');
                       clLink.href = clUrl;
-                      clLink.download = `${resume.first_name}_${resume.last_name}_Cover_Letter.pdf`;
+                      const clRole = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
+                      const clCompany = !resume.is_base_resume && resume.name?.includes(' at ')
+                        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
+                        : '';
+                      clLink.download = `${resume.first_name}_${resume.last_name}${clRole}${clCompany}_Cover_Letter.pdf`;
                       document.body.appendChild(clLink);
                       clLink.click();
                       document.body.removeChild(clLink);

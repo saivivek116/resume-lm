@@ -24,7 +24,11 @@ export function ResumeContextMenu({ children, resume }: ResumeContextMenuProps) 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${resume.first_name}_${resume.last_name}_Resume.pdf`;
+      const role = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
+      const company = !resume.is_base_resume && resume.name?.includes(' at ')
+        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
+        : '';
+      link.download = `${resume.first_name}_${resume.last_name}${role}${company}_Resume.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

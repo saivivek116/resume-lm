@@ -1,6 +1,6 @@
 'use client';
 
-import { Resume, Profile, Job, DocumentSettings } from "@/lib/types";
+import { Resume, Profile, Job, DocumentSettings, DEFAULT_DOCUMENT_SETTINGS } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion } from "@/components/ui/accordion";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -158,6 +158,7 @@ export function EditorPanel({
                     onChange={(_field: 'document_settings', value: DocumentSettings) => {
                       onResumeChange('document_settings', value);
                     }}
+                    profileDefaults={profile.document_settings ?? DEFAULT_DOCUMENT_SETTINGS}
                   />
                 </Suspense>
               </TabsContent>

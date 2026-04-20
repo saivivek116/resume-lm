@@ -26,9 +26,7 @@ export function GradientHover({
   return (
     <span
       className={cn(
-        "bg-gradient-to-r bg-clip-text text-transparent transition-all duration-700 bg-[length:200%_auto] hover:bg-[position:100%_0] cursor-pointer",
-        `from-${from} via-${via} to-${to}`,
-        `hover:from-${hoverFrom} hover:via-${hoverVia} hover:to-${hoverTo}`,
+        "text-violet-700 hover:text-indigo-700 transition-colors duration-700 cursor-pointer",
         className
       )}
     >

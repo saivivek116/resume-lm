@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
-import { Profile, ResumeSummary } from "@/lib/types";
+import { Profile, ResumeSummary, DEFAULT_DOCUMENT_SETTINGS } from "@/lib/types";
 
 interface DashboardData {
   profile: Profile | null;
@@ -46,6 +46,7 @@ export async function getDashboardData(): Promise<DashboardData> {
           education: [],
           skills: [],
           projects: [],
+          document_settings: DEFAULT_DOCUMENT_SETTINGS,
         }])
         .select()
         .single();

@@ -389,12 +389,13 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                               <div className={cn(
                                 "rounded-2xl px-4 py-2 max-w-[90%] text-sm relative group items-center",
                                 m.role === 'user' ? [
-                                  "bg-gradient-to-br from-purple-500 to-indigo-500",
-                                  "text-white",
-                                  "shadow-md shadow-purple-500/10",
-                                  "ml-auto pb-0 text-white"
+                                  "bg-white/90",
+                                  "text-black",
+                                  "shadow-sm",
+                                  "border border-purple-200/60",
+                                  "backdrop-blur-sm ml-auto pb-0"
                                 ] : [
-                                  "bg-white/60",
+                                  "bg-white/90",
                                   "border border-purple-200/60",
                                   "shadow-sm",
                                   "backdrop-blur-sm pb-0"
@@ -477,7 +478,7 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                                     {toolName === 'getResume' ? (
                                       <div className={cn(
                                         "rounded-2xl px-4 py-2 max-w-[90%] text-sm",
-                                        "bg-white/60 border border-purple-200/60",
+                                        "bg-white/90 border border-purple-200/60",
                                         "shadow-sm backdrop-blur-sm"
                                       )}>
                                         Reading Resume...
@@ -485,7 +486,7 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                                     ) : toolName === 'modifyWholeResume' ? (
                                       <div className={cn(
                                         "w-full rounded-2xl px-4 py-2",
-                                        "bg-white/60 border border-purple-200/60",
+                                        "bg-white/90 border border-purple-200/60",
                                         "shadow-sm backdrop-blur-sm"
                                       )}>
                                         Preparing resume modifications...
@@ -540,7 +541,7 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                                     <div className="flex justify-start">
                                       <div className={cn(
                                         "rounded-2xl px-4 py-2 max-w-[90%] text-sm",
-                                        "bg-white/60 border border-purple-200/60",
+                                        "bg-white/90 border border-purple-200/60",
                                         "shadow-sm backdrop-blur-sm"
                                       )}>
                                         <p>Read Resume ({args.sections?.join(', ') || 'all'}) ✅</p>
@@ -600,7 +601,7 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                             <div className="flex justify-start">
                               <div className={cn(
                                 "rounded-2xl px-4 py-2.5 min-w-[60px]",
-                                "bg-white/60",
+                                "bg-white/90",
                                 "border border-purple-200/60",
                                 "shadow-sm",
                                 "backdrop-blur-sm"

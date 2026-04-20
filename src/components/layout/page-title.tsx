@@ -70,7 +70,7 @@ export function PageTitle() {
   return (
     <div className="flex flex-col">
       <h1 className="text-base font-medium">
-        <span className="bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 bg-clip-text text-transparent">
+        <span className="text-purple-700">
           {title}
         </span>
       </h1>

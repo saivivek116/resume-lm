@@ -163,6 +163,22 @@ export const AI_MODELS: AIModel[] = [
     }
   },
   {
+    id: 'google/gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash Lite',
+    provider: 'openrouter',
+    features: {
+      isRecommended: false,
+      isUnstable: false,
+      maxTokens: 1048576,
+      supportsVision: false,
+      supportsTools: true
+    },
+    availability: {
+      requiresApiKey: true,
+      requiresPro: false
+    }
+  },
+  {
     id: 'google/gemini-3-pro-preview',
     name: 'Gemini 3 Pro Preview',
     provider: 'openrouter',
@@ -241,6 +257,38 @@ export const AI_MODELS: AIModel[] = [
     },
     availability: {
       requiresApiKey: false,
+      requiresPro: false
+    }
+  },
+  {
+    id: 'google/gemini-3-flash-preview',
+    name: 'Gemini 3 Flash Preview',
+    provider: 'openrouter',
+    features: {
+      isRecommended: false,
+      isUnstable: false,
+      maxTokens: 1000000,
+      supportsVision: false,
+      supportsTools: true
+    },
+    availability: {
+      requiresApiKey: true,
+      requiresPro: false
+    }
+  },
+  {
+    id: 'minimax/minimax-m2.5',
+    name: 'MiniMax M2.5',
+    provider: 'openrouter',
+    features: {
+      isRecommended: false,
+      isUnstable: false,
+      maxTokens: 196608,
+      supportsVision: false,
+      supportsTools: true
+    },
+    availability: {
+      requiresApiKey: true,
       requiresPro: false
     }
   },

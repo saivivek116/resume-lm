@@ -160,6 +160,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
 
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS document_settings jsonb NULL;
+
 -- Create updated_at trigger for profiles
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE
