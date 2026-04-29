@@ -1,6 +1,6 @@
 'use client';
 
-import { WorkExperience, Project, Profile, Education, Skill } from "@/lib/types";
+import { WorkExperience, Project, Profile, Education, Skill, Certification } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,12 +10,12 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
-type ImportItem = WorkExperience | Project | Education | Skill;
+type ImportItem = WorkExperience | Project | Education | Skill | Certification;
 
 interface ImportFromProfileDialogProps<T extends ImportItem> {
   profile: Profile;
   onImport: (items: T[]) => void;
-  type: 'work_experience' | 'projects' | 'education' | 'skills';
+  type: 'work_experience' | 'projects' | 'education' | 'skills' | 'certifications';
   buttonClassName?: string;
 }
 
@@ -28,20 +28,24 @@ export function ImportFromProfileDialog<T extends ImportItem>({
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
 
-  const items = type === 'work_experience' 
-    ? profile.work_experience 
+  const items = type === 'work_experience'
+    ? profile.work_experience
     : type === 'projects'
     ? profile.projects
     : type === 'education'
     ? profile.education
+    : type === 'certifications'
+    ? (profile.certifications ?? [])
     : profile.skills;
 
-  const title = type === 'work_experience' 
-    ? 'Work Experience' 
+  const title = type === 'work_experience'
+    ? 'Work Experience'
     : type === 'projects'
     ? 'Projects'
     : type === 'education'
     ? 'Education'
+    : type === 'certifications'
+    ? 'Certifications'
     : 'Skills';
 
   const handleImport = () => {
@@ -64,6 +68,9 @@ export function ImportFromProfileDialog<T extends ImportItem>({
     } else if (type === 'education') {
       const edu = item as Education;
       return `${edu.school}-${edu.degree}-${edu.field}`;
+    } else if (type === 'certifications') {
+      const cert = item as Certification;
+      return `${cert.name}-${cert.url}`;
     } else {
       return (item as Skill).category;
     }
@@ -77,6 +84,8 @@ export function ImportFromProfileDialog<T extends ImportItem>({
     } else if (type === 'education') {
       const edu = item as Education;
       return `${edu.degree} in ${edu.field}`;
+    } else if (type === 'certifications') {
+      return (item as Certification).name;
     } else {
       return (item as Skill).category;
     }
@@ -89,6 +98,8 @@ export function ImportFromProfileDialog<T extends ImportItem>({
       return ((item as Project).technologies || []).join(', ');
     } else if (type === 'education') {
       return (item as Education).school;
+    } else if (type === 'certifications') {
+      return (item as Certification).url || null;
     } else {
       return null;
     }

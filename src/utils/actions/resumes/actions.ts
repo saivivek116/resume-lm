@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
-import { Profile, Resume, WorkExperience, Education, Skill, Project, Job, DEFAULT_DOCUMENT_SETTINGS } from "@/lib/types";
+import { Profile, Resume, WorkExperience, Education, Skill, Project, Job, DEFAULT_DOCUMENT_SETTINGS, DEFAULT_SECTION_ORDER, Certification } from "@/lib/types";
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { simplifiedResumeSchema, Job as ZodJob } from "@/lib/zod-schemas";
@@ -207,6 +207,7 @@ export async function createBaseResume(
     education: Education[];
     skills: Skill[];
     projects: Project[];
+    certifications?: Certification[];
   }
 ): Promise<Resume> {
   const supabase = await createClient();
@@ -257,17 +258,18 @@ export async function createBaseResume(
     projects: (importOption === 'import-profile' || importOption === 'import-resume') && selectedContent
       ? selectedContent.projects
       : [],
-    section_order: [
-      'work_experience',
-      'education',
-      'skills',
-      'projects',
-    ],
+    certifications: importOption === 'import-resume'
+      ? (selectedContent?.certifications ?? [])
+      : importOption === 'import-profile'
+      ? (profile?.certifications ?? [])
+      : [],
+    section_order: profile?.section_order ?? [...DEFAULT_SECTION_ORDER],
     section_configs: {
       work_experience: { visible: (selectedContent?.work_experience?.length ?? 0) > 0 },
       education: { visible: (selectedContent?.education?.length ?? 0) > 0 },
       skills: { visible: (selectedContent?.skills?.length ?? 0) > 0 },
       projects: { visible: (selectedContent?.projects?.length ?? 0) > 0 },
+      certifications: { visible: (selectedContent?.certifications?.length ?? profile?.certifications?.length ?? 0) > 0 },
     },
     document_settings: profile?.document_settings ?? DEFAULT_DOCUMENT_SETTINGS
   };
@@ -329,9 +331,10 @@ export async function createTailoredResume(
     website: baseResume.website,
     linkedin_url: baseResume.linkedin_url,
     github_url: baseResume.github_url,
+    certifications: baseResume.certifications ?? [],
     document_settings: baseResume.document_settings,
     section_configs: baseResume.section_configs,
-    section_order: baseResume.section_order,
+    section_order: baseResume.section_order ?? [...DEFAULT_SECTION_ORDER],
     resume_title: `${jobTitle} at ${companyName}`,
     name: `${jobTitle} at ${companyName}`,
     created_at: new Date().toISOString(),

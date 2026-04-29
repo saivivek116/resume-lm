@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, GripVertical, Check, X, Loader2, Sparkles, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, GripVertical, Check, X, Loader2, Sparkles, ChevronUp, ChevronDown, ArrowDownWideNarrow } from "lucide-react";
 import { cn, withBasePath } from "@/lib/utils";
 import { ImportFromProfileDialog } from "../../management/dialogs/import-from-profile-dialog";
 import { ApiErrorDialog } from "@/components/ui/api-error-dialog";
@@ -18,7 +18,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import Tiptap from "@/components/ui/tiptap";
-import { generateWorkExperiencePoints, improveWorkExperience } from "@/utils/actions/resumes/ai";
+import { generateWorkExperiencePoints, improveWorkExperience, sortBulletsByImpact } from "@/utils/actions/resumes/ai";
 import { AIImprovementPrompt } from "../../shared/ai-improvement-prompt";
 import { AIGenerationSettingsTooltip } from "../components/ai-generation-tooltip";
 import { AISuggestions } from "../../shared/ai-suggestions";
@@ -72,6 +72,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
   const textareaRefs = useRef<{ [key: number]: HTMLTextAreaElement }>({});
   const [improvedPoints, setImprovedPoints] = useState<{ [key: number]: { [key: number]: ImprovedPoint } }>({});
   const [improvementConfig, setImprovementConfig] = useState<ImprovementConfig>({});
+  const [loadingSortAI, setLoadingSortAI] = useState<{ [key: number]: boolean }>({});
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
 
@@ -148,6 +149,96 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     textareaRefs.current = reorder(textareaRefs.current);
 
     onChange(updated);
+  };
+
+  const moveBullet = (expIndex: number, bulletIndex: number, direction: -1 | 1) => {
+    const exp = experiences[expIndex];
+    const newBulletIndex = bulletIndex + direction;
+    if (newBulletIndex < 0 || newBulletIndex >= exp.description.length) return;
+
+    const newDesc = [...exp.description];
+    const [item] = newDesc.splice(bulletIndex, 1);
+    newDesc.splice(newBulletIndex, 0, item);
+
+    const updated = [...experiences];
+    updated[expIndex] = { ...exp, description: newDesc };
+
+    // Remap inner per-bullet maps for this entry only.
+    const remapInner = <T,>(outer: Record<number, Record<number, T>>) => {
+      if (!outer[expIndex]) return outer;
+      return { ...outer, [expIndex]: reorderIndexMap(outer[expIndex], bulletIndex, newBulletIndex) };
+    };
+    setImprovedPoints((prev) => remapInner(prev));
+    setLoadingPointAI((prev) => remapInner(prev));
+    setImprovementConfig((prev) => remapInner(prev));
+
+    onChange(updated);
+  };
+
+  const sortBulletsByAI = async (expIndex: number) => {
+    const exp = experiences[expIndex];
+    if (exp.description.length < 2) return;
+
+    setLoadingSortAI((prev) => ({ ...prev, [expIndex]: true }));
+    try {
+      const MODEL_STORAGE_KEY = 'resumelm-default-model';
+      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
+      const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
+      let apiKeys = [];
+      try {
+        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
+      } catch (error) {
+        console.error('Error parsing API keys:', error);
+      }
+
+      const { sortedIndices } = await sortBulletsByImpact(
+        exp.description,
+        { role: exp.position, company: exp.company, targetRole },
+        { model: selectedModel || '', apiKeys }
+      );
+
+      // Apply the permutation to the description and to the inner per-bullet
+      // maps so any in-flight AI improvement / loading state stays attached
+      // to the same bullet text after the reorder.
+      const permuteInner = <T,>(arr: Record<number, T> | undefined) => {
+        const out: Record<number, T> = {};
+        if (!arr) return out;
+        sortedIndices.forEach((oldIdx, newIdx) => {
+          if (arr[oldIdx] !== undefined) out[newIdx] = arr[oldIdx];
+        });
+        return out;
+      };
+
+      const updated = [...experiences];
+      updated[expIndex] = { ...exp, description: sortedIndices.map((i) => exp.description[i]) };
+
+      setImprovedPoints((prev) => ({ ...prev, [expIndex]: permuteInner(prev[expIndex]) }));
+      setLoadingPointAI((prev) => ({ ...prev, [expIndex]: permuteInner(prev[expIndex]) }));
+      setImprovementConfig((prev) => ({ ...prev, [expIndex]: permuteInner(prev[expIndex]) }));
+
+      onChange(updated);
+    } catch (error: Error | unknown) {
+      if (error instanceof Error && (
+          error.message.toLowerCase().includes('api key') ||
+          error.message.toLowerCase().includes('unauthorized') ||
+          error.message.toLowerCase().includes('invalid key') ||
+          error.message.toLowerCase().includes('invalid x-api-key'))
+      ) {
+        setErrorMessage({
+          title: "API Key Error",
+          description: "There was an issue with your API key. Please check your settings and try again."
+        });
+      } else {
+        setErrorMessage({
+          title: "Sort failed",
+          description: "Could not rank bullets by impact. Please try again."
+        });
+      }
+      setShowErrorDialog(true);
+    } finally {
+      setLoadingSortAI((prev) => ({ ...prev, [expIndex]: false }));
+    }
   };
 
   const handleImportFromProfile = (importedExperiences: WorkExperience[]) => {
@@ -585,6 +676,28 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                             </>
                           ) : (
                             <>
+                              <div className="flex gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={descIndex === 0}
+                                  onClick={() => moveBullet(index, descIndex, -1)}
+                                  aria-label="Move bullet up"
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-cyan-600 disabled:opacity-30 transition-colors"
+                                >
+                                  <ChevronUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={descIndex === exp.description.length - 1}
+                                  onClick={() => moveBullet(index, descIndex, 1)}
+                                  aria-label="Move bullet down"
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-cyan-600 disabled:opacity-30 transition-colors"
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -688,6 +801,26 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Point
+                    </Button>
+
+                    {/* SORT BULLETS BY IMPACT (AI) */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => sortBulletsByAI(index)}
+                      disabled={loadingSortAI[index] || exp.description.length < 2}
+                      className={cn(
+                        "flex-1 text-purple-600 hover:text-purple-700 transition-colors text-[10px] sm:text-xs",
+                        "border-purple-200 hover:border-purple-300 hover:bg-purple-50/50",
+                        "disabled:opacity-50"
+                      )}
+                    >
+                      {loadingSortAI[index] ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <ArrowDownWideNarrow className="h-4 w-4 mr-1" />
+                      )}
+                      Sort by Impact
                     </Button>
 
 

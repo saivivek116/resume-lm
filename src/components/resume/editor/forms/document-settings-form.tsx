@@ -1,7 +1,14 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { DocumentSettings, DEFAULT_DOCUMENT_SETTINGS, COMPACT_DOCUMENT_SETTINGS } from "@/lib/types";
+import {
+  DocumentSettings,
+  DEFAULT_DOCUMENT_SETTINGS,
+  COMPACT_DOCUMENT_SETTINGS,
+  ResumeSectionId,
+  DEFAULT_SECTION_ORDER,
+  SECTION_LABELS,
+} from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChevronUp, ChevronDown } from "lucide-react"
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +20,9 @@ interface DocumentSettingsFormProps {
   onChange: (field: 'document_settings', value: DocumentSettings) => void;
   profileDefaults?: DocumentSettings;
   showSavedStyles?: boolean;
+  sectionOrder?: ResumeSectionId[];
+  onSectionOrderChange?: (order: ResumeSectionId[]) => void;
+  profileSectionOrderDefault?: ResumeSectionId[];
 }
 
 interface NumberInputProps {
@@ -63,7 +73,43 @@ function NumberInput({ value, onChange, min, max, step }: NumberInputProps) {
   )
 }
 
-export function DocumentSettingsForm({ documentSettings, onChange, profileDefaults, showSavedStyles = true }: DocumentSettingsFormProps) {
+export function DocumentSettingsForm({
+  documentSettings,
+  onChange,
+  profileDefaults,
+  showSavedStyles = true,
+  sectionOrder,
+  onSectionOrderChange,
+  profileSectionOrderDefault,
+}: DocumentSettingsFormProps) {
+
+  const reorderEnabled = !!onSectionOrderChange;
+  const effectiveOrder: ResumeSectionId[] = (() => {
+    const base = sectionOrder && sectionOrder.length > 0 ? sectionOrder : DEFAULT_SECTION_ORDER;
+    const seen = new Set<ResumeSectionId>();
+    const filtered: ResumeSectionId[] = [];
+    base.forEach((id) => {
+      if (!seen.has(id) && DEFAULT_SECTION_ORDER.includes(id)) {
+        seen.add(id);
+        filtered.push(id);
+      }
+    });
+    DEFAULT_SECTION_ORDER.forEach((id) => {
+      if (!seen.has(id)) filtered.push(id);
+    });
+    return filtered;
+  })();
+
+  const moveSection = (index: number, direction: -1 | 1) => {
+    if (!onSectionOrderChange) return;
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= effectiveOrder.length) return;
+    const updated = [...effectiveOrder];
+    const [item] = updated.splice(index, 1);
+    updated.splice(newIndex, 0, item);
+    onSectionOrderChange(updated);
+  };
+
 
   // Initialize document_settings if it doesn't exist
   if (!documentSettings) {
@@ -371,6 +417,77 @@ export function DocumentSettingsForm({ documentSettings, onChange, profileDefaul
           )}
         </CardHeader>
         <CardContent className="space-y-8">
+          {reorderEnabled && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  Section Order
+                </Label>
+                <div className="h-[1px] flex-1 mx-4 bg-gradient-to-r from-amber-200/30 via-orange-200/30 to-transparent" />
+              </div>
+
+              <p className="text-xs text-muted-foreground/80">
+                Drag sections up or down to control the order they appear on your resume. Empty sections are hidden automatically.
+              </p>
+
+              <div className="space-y-2 bg-slate-50/50 rounded-lg border border-slate-200/50 p-2">
+                {effectiveOrder.map((id, index) => (
+                  <div
+                    key={id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200/60 bg-white/70 px-3 py-2"
+                  >
+                    <span className="text-sm font-medium text-slate-700">
+                      {SECTION_LABELS[id]}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => moveSection(index, -1)}
+                        disabled={index === 0}
+                        className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => moveSection(index, 1)}
+                        disabled={index === effectiveOrder.length - 1}
+                        className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col @[400px]:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onSectionOrderChange?.([...DEFAULT_SECTION_ORDER])}
+                  className="flex-1 border-amber-200 hover:border-amber-400 hover:bg-amber-50/50 text-amber-700"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                  Reset to Default
+                </Button>
+                {profileSectionOrderDefault && profileSectionOrderDefault.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onSectionOrderChange?.([...profileSectionOrderDefault])}
+                    className="flex-1 border-violet-200 hover:border-violet-400 hover:bg-violet-50/50 text-violet-600"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                    Reset to Profile Default
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-6 ">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">

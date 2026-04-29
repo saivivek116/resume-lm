@@ -1,6 +1,6 @@
 'use client';
 
-import { Resume, Profile, Job, DocumentSettings, DEFAULT_DOCUMENT_SETTINGS } from "@/lib/types";
+import { Resume, Profile, Job, DocumentSettings, DEFAULT_DOCUMENT_SETTINGS, ResumeSectionId, DEFAULT_SECTION_ORDER, Certification } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion } from "@/components/ui/accordion";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import {
   EducationForm,
   SkillsForm,
   ProjectsForm,
+  CertificationsForm,
   DocumentSettingsForm
 } from '../dynamic-components';
 import { ResumeEditorTabs } from "../header/resume-editor-tabs";
@@ -145,6 +146,22 @@ export function EditorPanel({
                 </Suspense>
               </TabsContent>
 
+              {/* Certifications Form */}
+              <TabsContent value="certifications">
+                <Suspense fallback={
+                  <div className="space-y-4 animate-pulse">
+                    <div className="h-8 bg-muted rounded-md w-1/3" />
+                    <div className="h-24 bg-muted rounded-md" />
+                  </div>
+                }>
+                  <CertificationsForm
+                    certifications={resume.certifications ?? []}
+                    onChange={(certifications: Certification[]) => onResumeChange('certifications', certifications)}
+                    profile={profile}
+                  />
+                </Suspense>
+              </TabsContent>
+
               {/* Document Settings Form */}
               <TabsContent value="settings">
                 <Suspense fallback={
@@ -159,6 +176,9 @@ export function EditorPanel({
                       onResumeChange('document_settings', value);
                     }}
                     profileDefaults={profile.document_settings ?? DEFAULT_DOCUMENT_SETTINGS}
+                    sectionOrder={resume.section_order ?? DEFAULT_SECTION_ORDER}
+                    onSectionOrderChange={(order: ResumeSectionId[]) => onResumeChange('section_order', order)}
+                    profileSectionOrderDefault={profile.section_order ?? undefined}
                   />
                 </Suspense>
               </TabsContent>

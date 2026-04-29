@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, GripVertical, Loader2, Sparkles, Check, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, GripVertical, Loader2, Sparkles, Check, X, ChevronUp, ChevronDown, ArrowDownWideNarrow } from "lucide-react";
 import { cn, withBasePath } from "@/lib/utils";
 import { ImportFromProfileDialog } from "../../management/dialogs/import-from-profile-dialog";
 import { useState, useRef, useEffect, memo } from "react";
@@ -16,7 +16,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { AISuggestions } from "../../shared/ai-suggestions";
-import { generateProjectPoints, improveProject } from "@/utils/actions/resumes/ai";
+import { generateProjectPoints, improveProject, sortBulletsByImpact } from "@/utils/actions/resumes/ai";
 import { Badge } from "@/components/ui/badge";
 import { KeyboardEvent } from "react";
 import Tiptap from "@/components/ui/tiptap";
@@ -66,6 +66,7 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
   const [popoverOpen, setPopoverOpen] = useState<{ [key: number]: boolean }>({});
   const [improvedPoints, setImprovedPoints] = useState<{ [key: number]: { [key: number]: ImprovedPoint } }>({});
   const [improvementConfig, setImprovementConfig] = useState<ImprovementConfig>({});
+  const [loadingSortAI, setLoadingSortAI] = useState<{ [key: number]: boolean }>({});
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
   const textareaRefs = useRef<{ [key: number]: HTMLTextAreaElement }>({});
@@ -145,6 +146,92 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
     textareaRefs.current = reorder(textareaRefs.current);
 
     onChange(updated);
+  };
+
+  const moveBullet = (projIndex: number, bulletIndex: number, direction: -1 | 1) => {
+    const project = projects[projIndex];
+    const newBulletIndex = bulletIndex + direction;
+    if (newBulletIndex < 0 || newBulletIndex >= project.description.length) return;
+
+    const newDesc = [...project.description];
+    const [item] = newDesc.splice(bulletIndex, 1);
+    newDesc.splice(newBulletIndex, 0, item);
+
+    const updated = [...projects];
+    updated[projIndex] = { ...project, description: newDesc };
+
+    const remapInner = <T,>(outer: Record<number, Record<number, T>>) => {
+      if (!outer[projIndex]) return outer;
+      return { ...outer, [projIndex]: reorderIndexMap(outer[projIndex], bulletIndex, newBulletIndex) };
+    };
+    setImprovedPoints((prev) => remapInner(prev));
+    setLoadingPointAI((prev) => remapInner(prev));
+    setImprovementConfig((prev) => remapInner(prev));
+
+    onChange(updated);
+  };
+
+  const sortBulletsByAI = async (projIndex: number) => {
+    const project = projects[projIndex];
+    if (project.description.length < 2) return;
+
+    setLoadingSortAI((prev) => ({ ...prev, [projIndex]: true }));
+    try {
+      const MODEL_STORAGE_KEY = 'resumelm-default-model';
+      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
+      const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
+      let apiKeys = [];
+      try {
+        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
+      } catch (error) {
+        console.error('Error parsing API keys:', error);
+      }
+
+      const { sortedIndices } = await sortBulletsByImpact(
+        project.description,
+        { projectName: project.name },
+        { model: selectedModel || '', apiKeys }
+      );
+
+      const permuteInner = <T,>(arr: Record<number, T> | undefined) => {
+        const out: Record<number, T> = {};
+        if (!arr) return out;
+        sortedIndices.forEach((oldIdx, newIdx) => {
+          if (arr[oldIdx] !== undefined) out[newIdx] = arr[oldIdx];
+        });
+        return out;
+      };
+
+      const updated = [...projects];
+      updated[projIndex] = { ...project, description: sortedIndices.map((i) => project.description[i]) };
+
+      setImprovedPoints((prev) => ({ ...prev, [projIndex]: permuteInner(prev[projIndex]) }));
+      setLoadingPointAI((prev) => ({ ...prev, [projIndex]: permuteInner(prev[projIndex]) }));
+      setImprovementConfig((prev) => ({ ...prev, [projIndex]: permuteInner(prev[projIndex]) }));
+
+      onChange(updated);
+    } catch (error: Error | unknown) {
+      if (error instanceof Error && (
+          error.message.toLowerCase().includes('api key') ||
+          error.message.toLowerCase().includes('unauthorized') ||
+          error.message.toLowerCase().includes('invalid key') ||
+          error.message.toLowerCase().includes('invalid x-api-key'))
+      ) {
+        setErrorMessage({
+          title: "API Key Error",
+          description: "There was an issue with your API key. Please check your settings and try again."
+        });
+      } else {
+        setErrorMessage({
+          title: "Sort failed",
+          description: "Could not rank bullets by impact. Please try again."
+        });
+      }
+      setShowErrorDialog(true);
+    } finally {
+      setLoadingSortAI((prev) => ({ ...prev, [projIndex]: false }));
+    }
   };
 
   const handleImportFromProfile = (importedProjects: Project[]) => {
@@ -616,6 +703,28 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
                             </>
                           ) : (
                             <>
+                              <div className="flex gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={descIndex === 0}
+                                  onClick={() => moveBullet(index, descIndex, -1)}
+                                  aria-label="Move bullet up"
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-violet-600 disabled:opacity-30 transition-colors"
+                                >
+                                  <ChevronUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={descIndex === project.description.length - 1}
+                                  onClick={() => moveBullet(index, descIndex, 1)}
+                                  aria-label="Move bullet down"
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-violet-600 disabled:opacity-30 transition-colors"
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -720,7 +829,26 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
                       Add Point
                     </Button>
 
-                    
+                    {/* SORT BULLETS BY IMPACT (AI) */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => sortBulletsByAI(index)}
+                      disabled={loadingSortAI[index] || project.description.length < 2}
+                      className={cn(
+                        "flex-1 text-purple-600 hover:text-purple-700 transition-colors text-[10px] sm:text-xs",
+                        "border-purple-200 hover:border-purple-300 hover:bg-purple-50/50",
+                        "disabled:opacity-50"
+                      )}
+                    >
+                      {loadingSortAI[index] ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <ArrowDownWideNarrow className="h-4 w-4 mr-1" />
+                      )}
+                      Sort by Impact
+                    </Button>
+
                     <AIGenerationSettingsTooltip
                       index={index}
                       loadingAI={loadingAI[index]}

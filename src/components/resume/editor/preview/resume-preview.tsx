@@ -49,10 +49,12 @@ function generateResumeHash(resume: Resume): string {
       experience: resume.work_experience,
       projects: resume.projects,
       education: resume.education,
+      certifications: resume.certifications,
     },
+    section_order: resume.section_order,
     settings: resume.document_settings,
   });
-  
+
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < content.length; i++) {

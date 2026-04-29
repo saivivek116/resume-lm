@@ -31,6 +31,34 @@ export interface Skill {
   items: string[];
 }
 
+export interface Certification {
+  name: string;
+  url: string;
+}
+
+export type ResumeSectionId =
+  | 'skills'
+  | 'work_experience'
+  | 'projects'
+  | 'education'
+  | 'certifications';
+
+export const DEFAULT_SECTION_ORDER: ResumeSectionId[] = [
+  'skills',
+  'work_experience',
+  'projects',
+  'education',
+  'certifications',
+];
+
+export const SECTION_LABELS: Record<ResumeSectionId, string> = {
+  skills: 'Skills',
+  work_experience: 'Work Experience',
+  projects: 'Projects',
+  education: 'Education',
+  certifications: 'Certifications',
+};
+
 export interface CustomPrompts {
   aiAssistant?: string;
   workExperienceGenerator?: string;
@@ -86,10 +114,11 @@ export interface Resume {
   education: Education[];
   skills: Skill[];
   projects: Project[];
+  certifications: Certification[];
   created_at: string;
   updated_at: string;
   document_settings?: DocumentSettings;
-  section_order?: string[];
+  section_order?: ResumeSectionId[];
   section_configs?: {
     [key: string]: { visible: boolean };
   };
@@ -230,7 +259,9 @@ export interface Profile {
   education: Education[];
   skills: Skill[];
   projects: Project[];
+  certifications: Certification[];
   document_settings?: DocumentSettings | null;
+  section_order?: ResumeSectionId[] | null;
   created_at: string;
   updated_at: string;
 }

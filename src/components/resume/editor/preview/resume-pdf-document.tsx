@@ -1,6 +1,6 @@
 'use client';
 
-import { Resume } from "@/lib/types";
+import { Resume, DEFAULT_SECTION_ORDER } from "@/lib/types";
 import { Document as PDFDocument, Page as PDFPage, Text, View, StyleSheet, Link, Image } from '@react-pdf/renderer';
 import { memo, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
@@ -288,6 +288,35 @@ const EducationSection = memo(function EducationSection({
   );
 });
 
+const CertificationsSection = memo(function CertificationsSection({
+  certifications,
+  styles
+}: {
+  certifications: Resume['certifications'];
+  styles: ReturnType<typeof createResumeStyles>;
+}) {
+  if (!certifications?.length) return null;
+
+  return (
+    <View style={styles.certificationsSection}>
+      <Text style={styles.sectionTitle}>Certifications</Text>
+      <View style={styles.certificationsGrid}>
+        {certifications.map((cert, index) => (
+          <View key={index} style={styles.certificationItem}>
+            {cert.url ? (
+              <Link src={cert.url.startsWith('http') ? cert.url : `https://${cert.url}`}>
+                <Text style={styles.certificationNameLink}>{cert.name}</Text>
+              </Link>
+            ) : (
+              <Text style={styles.certificationName}>{cert.name}</Text>
+            )}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+});
+
 // Style factory function
 function createResumeStyles(settings: Resume['document_settings'] = {
   document_font_size: 10,
@@ -538,6 +567,32 @@ function createResumeStyles(settings: Resume['document_settings'] = {
       fontSize: document_font_size,
       color: '#111827',
     },
+    certificationsSection: {
+      marginTop: education_margin_top,
+      marginBottom: education_margin_bottom,
+      marginLeft: education_margin_horizontal,
+      marginRight: education_margin_horizontal,
+    },
+    certificationsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    certificationItem: {
+      width: '50%',
+      paddingRight: 8,
+      marginBottom: education_item_spacing,
+    },
+    certificationName: {
+      fontSize: document_font_size,
+      fontFamily: 'Helvetica-Bold',
+      color: '#111827',
+    },
+    certificationNameLink: {
+      fontSize: document_font_size,
+      fontFamily: 'Helvetica-Bold',
+      color: '#2563eb',
+      textDecoration: 'none',
+    },
     footer: {
       position: 'absolute',
       bottom: 20,
@@ -576,11 +631,23 @@ export const ResumePDFDocument = memo(function ResumePDFDocument({ resume }: Res
     >
       <PDFPage size="LETTER" style={styles.page}>
         <HeaderSection resume={resume} styles={styles} />
-        <SkillsSection skills={resume.skills} styles={styles} />
-        <ExperienceSection experiences={resume.work_experience} styles={styles} />
-        <ProjectsSection projects={resume.projects} styles={styles} />
-        <EducationSection education={resume.education} styles={styles} />
-        
+        {(resume.section_order ?? DEFAULT_SECTION_ORDER).map((id) => {
+          switch (id) {
+            case 'skills':
+              return <SkillsSection key={id} skills={resume.skills} styles={styles} />;
+            case 'work_experience':
+              return <ExperienceSection key={id} experiences={resume.work_experience} styles={styles} />;
+            case 'projects':
+              return <ProjectsSection key={id} projects={resume.projects} styles={styles} />;
+            case 'education':
+              return <EducationSection key={id} education={resume.education} styles={styles} />;
+            case 'certifications':
+              return <CertificationsSection key={id} certifications={resume.certifications} styles={styles} />;
+            default:
+              return null;
+          }
+        })}
+
         {resume.document_settings?.show_ubc_footer && (
           <View style={styles.footer}>
             {/* React PDF Image does not support alt text, so disable lint here */}

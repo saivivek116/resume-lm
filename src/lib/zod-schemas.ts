@@ -34,6 +34,11 @@ export const skillSchema = z.object({
   items: z.array(z.string()),
 });
 
+export const certificationSchema = z.object({
+  name: z.string(),
+  url: z.string().url().or(z.literal('')),
+});
+
 
 // Schema for text import functionality
 export const textImportSchema = z.object({
@@ -156,6 +161,7 @@ export const resumeSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(skillSchema).optional(),
   projects: z.array(projectSchema).optional(),
+  certifications: z.array(certificationSchema).optional(),
 
 //   created_at: z.string().datetime(),
 //   updated_at: z.string().datetime(),
@@ -269,6 +275,19 @@ export const workExperienceItemsSchema = z.object({
 export type WorkExperienceBulletPoints = z.infer<typeof workExperienceBulletPointsSchema>;
 export type ProjectAnalysis = z.infer<typeof projectAnalysisSchema>;
 export type WorkExperienceItems = z.infer<typeof workExperienceItemsSchema>;
+
+// Returned by the AI when ranking bullets by impact for a single experience or
+// project. `sortedIndices` is a permutation of [0..n-1] referring to the
+// original bullet positions — the client reorders the array using these
+// indices, so the bullet text itself is never modified.
+export const bulletImpactSortSchema = z.object({
+  sortedIndices: z.array(z.number().int().min(0)).describe(
+    "A permutation of the original bullet indices, ordered from highest to lowest impact"
+  ),
+  reasoning: z.string().optional().describe("Short explanation of the ranking")
+});
+
+export type BulletImpactSort = z.infer<typeof bulletImpactSortSchema>;
 
 // Add to existing zod schemas in this file
 export const resumeScoreSchema = z.object({

@@ -2,12 +2,12 @@
 
 // import { RESUME_IMPORTER_SYSTEM_MESSAGE, } from "@/lib/prompts";
 import { Resume } from "@/lib/types";
-import { textImportSchema, workExperienceBulletPointsSchema } from "@/lib/zod-schemas";
+import { bulletImpactSortSchema, textImportSchema, workExperienceBulletPointsSchema } from "@/lib/zod-schemas";
 import { generateObject, type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { getSubscriptionPlan } from "@/utils/actions/stripe/actions";
-import { PROJECT_GENERATOR_MESSAGE, PROJECT_IMPROVER_MESSAGE, TEXT_ANALYZER_SYSTEM_MESSAGE, WORK_EXPERIENCE_GENERATOR_MESSAGE, WORK_EXPERIENCE_IMPROVER_MESSAGE } from "@/lib/prompts";
+import { BULLET_IMPACT_SORTER_MESSAGE, PROJECT_GENERATOR_MESSAGE, PROJECT_IMPROVER_MESSAGE, TEXT_ANALYZER_SYSTEM_MESSAGE, WORK_EXPERIENCE_GENERATOR_MESSAGE, WORK_EXPERIENCE_IMPROVER_MESSAGE } from "@/lib/prompts";
 import { projectAnalysisSchema, workExperienceItemsSchema } from "@/lib/zod-schemas";
 import { WorkExperience } from "@/lib/types";
 import { getDefaultModel } from "@/lib/ai-models";
@@ -295,6 +295,49 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
           skills: [...existingResume.skills, ...(object.content.skills || [])],
           projects: [...existingResume.projects, ...(object.content.projects || [])],
           };
-          
+
           return updatedResume;
       }
+
+// SORT BULLETS BY IMPACT
+// Returns a permutation of original bullet indices, ordered from highest to
+// lowest impact. The caller reorders the array client-side; bullet text is
+// never modified by the model.
+export async function sortBulletsByImpact(
+  bullets: string[],
+  context: { role?: string; targetRole?: string; company?: string; projectName?: string },
+  config?: AIConfig
+) {
+  const subscriptionPlan = await getSubscriptionPlan();
+  const isPro = subscriptionPlan === 'pro';
+  const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+
+  const numbered = bullets.map((b, i) => `[${i}] ${b}`).join('\n');
+  const ctxLine = [
+    context.role && `Role: ${context.role}`,
+    context.company && `Company: ${context.company}`,
+    context.projectName && `Project: ${context.projectName}`,
+    context.targetRole && `Target role: ${context.targetRole}`,
+  ].filter(Boolean).join(' | ');
+
+  const { object } = await generateObject({
+    model: aiClient,
+    schema: bulletImpactSortSchema,
+    system: BULLET_IMPACT_SORTER_MESSAGE.content as string,
+    prompt: `${ctxLine ? ctxLine + '\n\n' : ''}Bullets (do not modify text — return indices only):\n${numbered}`,
+  });
+
+  // Validate it's a true permutation; if the model returns a malformed list,
+  // fall back to the original order so the UI never crashes or loses bullets.
+  const n = bullets.length;
+  const indices = object.sortedIndices ?? [];
+  const valid =
+    indices.length === n &&
+    new Set(indices).size === n &&
+    indices.every((i) => Number.isInteger(i) && i >= 0 && i < n);
+
+  return {
+    sortedIndices: valid ? indices : bullets.map((_, i) => i),
+    reasoning: object.reasoning,
+  };
+}
