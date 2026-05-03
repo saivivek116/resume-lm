@@ -9,7 +9,6 @@ import { ErrorDialog } from "@/components/auth/error-dialog";
 import { CreatorStory } from "@/components/landing/creator-story";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { HeroVideoSection } from "@/components/landing/hero-video-section";
-import { Footer } from "@/components/layout/footer";
 import { SplitContent } from "@/components/ui/split-content";
 import { NavLinks } from "@/components/layout/nav-links";
 import { ModelShowcase } from "@/components/landing/model-showcase";
@@ -291,7 +290,6 @@ export default async function LoginPage({
           </div>
         </div>
         </main>
-        <Footer variant="static"/>
       </AuthDialogProvider>
     </>
   );

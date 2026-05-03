@@ -11,7 +11,7 @@ export default function ResumeEditorLayout({
       {/* <BackgroundEffects /> */}
 
       {/* Content Layer */}
-      <div className="relative z-10  mx-auto w-full">
+      <div className="relative z-10 mx-auto w-full h-full">
         {children}
       </div>
     </div>

@@ -1,7 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { Footer } from "@/components/layout/footer";
 import { AppHeader } from "@/components/layout/app-header";
 import { createClient } from "@/utils/supabase/server";
 import { Metadata } from "next";
@@ -142,12 +141,10 @@ export default async function RootLayout({
                 upgradeButtonVariant={upgradeButtonVariant}
               />
             )}
-            {/* Padding for header and footer */}
-            <main className="py-14 h-full">
+            <main className="pt-14 flex-1 flex flex-col overflow-y-auto">
               {children}
               {isVercel && <Analytics />}
             </main>
-            {user && <Footer /> }
           </div>
           <Toaster
             richColors

@@ -408,7 +408,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
       marginBottom: 4,
       color: '#111827',
       textTransform: 'uppercase',
-      borderBottom: '0.5pt solid #e5e7eb',
+      borderBottom: '0.5pt solid #374151',
       paddingBottom: 0,
     },
     // Skills section
@@ -437,7 +437,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     skillItem: {
       fontSize: document_font_size,
-      color: '#374151',
+      color: '#111827',
       flexGrow: 1,
       flexBasis: 0,
       flexWrap: 'wrap',
@@ -529,7 +529,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     projectTechnologies: {
       fontSize: document_font_size,
-      color: '#374151',
+      color: '#111827',
       fontFamily: 'Helvetica-Bold',
       marginBottom: 0,
     },
