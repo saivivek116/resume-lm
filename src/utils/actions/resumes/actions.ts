@@ -10,6 +10,7 @@ import { generateObject } from "ai";
 import { initializeAIClient } from "@/utils/ai-tools";
 import { resumeScoreSchema } from "@/lib/zod-schemas";
 import { getSubscriptionPlan } from "../stripe/actions";
+import { getDefaultModel } from "@/lib/ai-models";
 import { getSubscriptionAccessState } from "@/lib/subscription-access";
 import {
   FREE_PLAN_RESUME_LIMITS,
@@ -441,9 +442,7 @@ export async function generateResumeScore(
 ) {
   
 
-  const subscriptionPlan = await getSubscriptionPlan();
-  const isPro = subscriptionPlan === 'pro';
-  const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+  const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
 
   const isTailoredResume = job && !resume.is_base_resume;
 
