@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { FileText, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
 import { cn, withBasePath } from "@/lib/utils";
 import { useState } from 'react';
+import { useDefaultModel } from '@/hooks/use-api-keys';
 import { readStreamableValue } from 'ai/rsc';
 import type { AIConfig } from "@/utils/ai-tools";
 import { AIImprovementPrompt } from "../../shared/ai-improvement-prompt";
@@ -27,6 +28,7 @@ export function CoverLetterPanel({
   aiConfig,
 }: CoverLetterPanelProps) {
   const { dispatch } = useResumeContext();
+  const { defaultModel } = useDefaultModel();
   const [isGenerating, setIsGenerating] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -46,19 +48,7 @@ export function CoverLetterPanel({
     setIsGenerating(true);
     
     try {
-      // Get model and API key from local storage
-      const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
-      const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
+      const selectedModel = defaultModel;
 
       // Prompt
       const prompt = `Write a professional cover letter for the following job using my resume information:
@@ -82,7 +72,6 @@ export function CoverLetterPanel({
       const { output } = await generate(prompt, {
         ...aiConfig,
         model: selectedModel || '',
-        apiKeys
       });
 
       // Generated Content
