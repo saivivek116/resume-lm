@@ -195,3 +195,19 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY profiles_policy ON public.profiles
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
+
+-- User API Keys (encrypted, BYOK)
+CREATE TABLE IF NOT EXISTS public.user_api_keys (
+  user_id       uuid NOT NULL,
+  provider      text NOT NULL,
+  encrypted_key text NOT NULL,
+  updated_at    timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT user_api_keys_pkey PRIMARY KEY (user_id, provider),
+  CONSTRAINT user_api_keys_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+ALTER TABLE public.user_api_keys ENABLE ROW LEVEL SECURITY;
+CREATE POLICY user_api_keys_policy ON public.user_api_keys
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
