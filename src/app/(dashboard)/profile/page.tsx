@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getDashboardData } from "@/utils/actions";
 import { ProfileEditForm } from "@/components/profile/profile-edit-form";
 import { Suspense } from "react";
+import { hasApiKey } from "@/utils/actions/api-keys/actions";
 
 // Force dynamic behavior and disable caching
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,13 @@ export default async function EditProfilePage() {
     redirect("/home");
   }
 
+  const [hasOpenAI, hasAnthropic, hasOpenRouter] = await Promise.all([
+    hasApiKey('openai'),
+    hasApiKey('anthropic'),
+    hasApiKey('openrouter'),
+  ])
+  const keyStatus = { openai: hasOpenAI, anthropic: hasAnthropic, openrouter: hasOpenRouter }
+
   return (
     <main className="min-h-screen relative">
       {/* Background Layer */}
@@ -37,7 +45,7 @@ export default async function EditProfilePage() {
       {/* Main Content Layer */}
       <div className="relative z-10">
         <Suspense fallback={<div>Loading...</div>}>
-          <ProfileEditForm profile={profile} />
+          <ProfileEditForm profile={profile} keyStatus={keyStatus} />
         </Suspense>
       </div>
     </main>
