@@ -130,24 +130,13 @@ export function TailoredJobCard({
     try {
       setIsFormatting(true);
 
-      // Get model and API key from local storage
+      // Get model from local storage
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       // Format job listing using AI
       const formattedJob = await formatJobListing(jobDescription, {
         model: selectedModel || '',
-        apiKeys
       });
 
       setIsFormatting(false);

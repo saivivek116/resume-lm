@@ -182,20 +182,12 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     setLoadingSortAI((prev) => ({ ...prev, [expIndex]: true }));
     try {
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       const { sortedIndices } = await sortBulletsByImpact(
         exp.description,
         { role: exp.position, company: exp.company, targetRole },
-        { model: selectedModel || '', apiKeys }
+        { model: selectedModel || '' }
       );
 
       // Apply the permutation to the description and to the inner per-bullet
@@ -252,19 +244,8 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     setPopoverOpen(prev => ({ ...prev, [index]: false }));
     
     try {
-      // Get model and API key from local storage
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       const result = await generateWorkExperiencePoints(
         exp.position,
@@ -275,7 +256,6 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
         config.customPrompt,
         {
           model: selectedModel || '',
-          apiKeys
         }
       );
       
@@ -341,23 +321,11 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     }));
     
     try {
-      // Get model and API key from local storage
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       const improvedPoint = await improveWorkExperience(point, customPrompt, {
         model: selectedModel || '',
-        apiKeys
       });
 
       // Store both original and improved versions

@@ -13,8 +13,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useState, useEffect, useRef } from "react";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { getDefaultModel } from "@/lib/ai-models";
-import { useApiKeys, useDefaultModel } from "@/hooks/use-api-keys";
+import { useDefaultModel } from "@/hooks/use-api-keys";
 import { TrialStartButton } from "@/components/trial/trial-start-button";
+import { getAvailableProviders } from "@/utils/actions/api-keys/actions";
+import type { ServiceName } from "@/lib/types";
 
 interface AppHeaderProps {
   children?: React.ReactNode;
@@ -30,24 +32,29 @@ export function AppHeader({
   upgradeButtonVariant = 'upgrade',
 }: AppHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
-  
-  // Use synchronized hooks for instant updates across components
-  const { apiKeys } = useApiKeys();
+  const [availableProviders, setAvailableProviders] = useState<ServiceName[]>([]);
+
+  // Use synchronized hook for instant updates across components
   const { defaultModel, setDefaultModel } = useDefaultModel();
-  
+
   // Track if we've initialized the default model
   const hasInitialized = useRef(false);
+
+  // Fetch available providers on mount
+  useEffect(() => {
+    getAvailableProviders().then(setAvailableProviders);
+  }, []);
 
   // Initialize default model if not set (only runs once on mount)
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
-    
+
     if (!defaultModel) {
-      const defaultModelId = getDefaultModel(isProPlan);
+      const defaultModelId = getDefaultModel();
       setDefaultModel(defaultModelId);
     }
-  }, [defaultModel, isProPlan, setDefaultModel]);
+  }, [defaultModel, setDefaultModel]);
 
   const handleModelChange = (modelId: string) => {
     setDefaultModel(modelId);
@@ -89,24 +96,23 @@ export function AppHeader({
                     <div className="h-4 w-px bg-purple-200 ml-2 lg:ml-3" />
                   </>
                 )}
-                
+
                 {/* Model Selector - Responsive Width */}
                 <div className="mr-2 lg:mr-3">
                   <ModelSelector
                     value={defaultModel}
                     onValueChange={handleModelChange}
-                    apiKeys={apiKeys}
-                    isProPlan={isProPlan}
+                    availableProviders={availableProviders}
                     className="w-[220px] lg:w-[260px] xl:w-[300px] h-8 text-xs"
                     placeholder="Select AI model"
                     showToast={false}
                   />
                 </div>
                 <div className="h-4 w-px bg-purple-200" />
-                
+
                 <div className="flex items-center px-2 lg:px-3 py-1">
-                  <Link 
-                    href="/profile" 
+                  <Link
+                    href="/profile"
                     onClick={handleProfileClick}
                     className={cn(
                       "flex items-center gap-1.5 px-2 lg:px-3 py-1",
@@ -142,20 +148,19 @@ export function AppHeader({
                       ) : (
                         <ProUpgradeButton className="w-full" />
                       ))}
-                    
+
                     {/* Mobile Model Selector */}
                     <div className="px-1">
                       <ModelSelector
                         value={defaultModel}
                         onValueChange={handleModelChange}
-                        apiKeys={apiKeys}
-                        isProPlan={isProPlan}
+                        availableProviders={availableProviders}
                         className="w-full h-10 text-sm"
                         placeholder="Select AI model"
                         showToast={false}
                       />
                     </div>
-                    
+
                     <Link
                       href="/profile"
                       onClick={handleProfileClick}

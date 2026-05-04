@@ -5,18 +5,21 @@ import { Sparkles, Crown, ArrowRight, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ProUpgradeButton } from "@/components/settings/pro-upgrade-button"
-import { useApiKeys } from "@/hooks/use-api-keys"
+import { getAvailableProviders } from "@/utils/actions/api-keys/actions"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 type ApiKeyAlertVariant = 'upgrade' | 'trial'
 
 export function ApiKeyAlert({ variant = 'upgrade' }: { variant?: ApiKeyAlertVariant }) {
-  // Use synchronized hook for instant updates when API keys change
-  const { apiKeys } = useApiKeys()
   const router = useRouter()
-  
-  // Check if user has any API keys configured
-  const hasApiKeys = apiKeys.length > 0
+  const [hasApiKeys, setHasApiKeys] = useState(true) // default true to avoid flash
+
+  useEffect(() => {
+    getAvailableProviders().then(providers => {
+      setHasApiKeys(providers.length > 0)
+    })
+  }, [])
 
   if (hasApiKeys) return null
 
@@ -26,7 +29,7 @@ export function ApiKeyAlert({ variant = 'upgrade' }: { variant?: ApiKeyAlertVari
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-50 via-indigo-50 to-purple-50 border-2 border-purple-200 shadow-lg">
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-purple-100/20 via-transparent to-indigo-100/20" />
-          
+
           <div className="relative p-4">
             {/* Main Content - Horizontal Layout */}
             <div className="flex items-center gap-4">
@@ -54,7 +57,7 @@ export function ApiKeyAlert({ variant = 'upgrade' }: { variant?: ApiKeyAlertVari
                     </>
                   )}
                 </div>
-                
+
                 <div className="flex items-center gap-4 text-xs text-gray-600 mb-2">
                   <span className="flex items-center gap-1">🚀 Unlimited resumes</span>
                   <span className="flex items-center gap-1">🤖 Latest AI models</span>
@@ -94,7 +97,7 @@ export function ApiKeyAlert({ variant = 'upgrade' }: { variant?: ApiKeyAlertVari
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     <span>Or use your own API keys:</span>
-                    <a 
+                    <a
                       href="https://console.anthropic.com/"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -102,7 +105,7 @@ export function ApiKeyAlert({ variant = 'upgrade' }: { variant?: ApiKeyAlertVari
                     >
                       Anthropic <ArrowRight className="w-3 h-3" />
                     </a>
-                    <a 
+                    <a
                       href="https://platform.openai.com/docs/quickstart/create-and-export-an-api-key"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -128,4 +131,4 @@ export function ApiKeyAlert({ variant = 'upgrade' }: { variant?: ApiKeyAlertVari
       </AlertDescription>
     </Alert>
   )
-} 
+}
