@@ -4,25 +4,21 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Crown, ArrowRight } from "lucide-react"
-import Link from "next/link"
 import {
   getModelById,
   getProviderById,
   isModelAvailable,
   groupModelsByProvider,
   type AIModel,
-  type ApiKey
 } from '@/lib/ai-models'
+import type { ServiceName } from '@/lib/types'
 
 interface ModelSelectorProps {
   value: string
   onValueChange: (value: string) => void
-  apiKeys: ApiKey[]
-  isProPlan: boolean
+  availableProviders: ServiceName[]
   className?: string
   placeholder?: string
   showToast?: boolean
@@ -44,85 +40,41 @@ function UnavailableModelPopover({ children, model }: { children: React.ReactNod
           {children}
         </div>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-80 z-50" 
-        side="right" 
+      <PopoverContent
+        className="w-80 z-50"
+        side="right"
         align="start"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <h4 className="font-semibold text-sm">
-              {model.name} is not available
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              To use this model, you need either a Pro subscription or a {provider?.name} API key.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            {/* Pro Option */}
-            <div className="p-3 rounded-lg border border-purple-200/50 bg-gradient-to-br from-purple-50/50 to-purple-100/30">
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-800">Recommended</span>
-                <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
-                  Instant Access
-                </span>
-              </div>
-              <p className="text-xs text-purple-700 mb-2">
-                Get unlimited access to all AI models without managing API keys
-              </p>
-              <Link href="/subscription">
-                <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700 h-7 text-xs">
-                  Upgrade to Pro
-                </Button>
-              </Link>
-            </div>
-
-            {/* API Key Option */}
-            <div className="p-3 rounded-lg border border-gray-200/50 bg-gray-50/30">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium text-gray-800">Alternative</span>
-              </div>
-              <p className="text-xs text-gray-600 mb-2">
-                Add your own {provider?.name} API key to use this model
-              </p>
-              <div className="flex gap-2">
-                <Link href="/settings" className="flex-1">
-                  <Button size="sm" variant="outline" className="w-full h-7 text-xs">
-                    Configure API Key
-                  </Button>
-                </Link>
-                {provider?.apiLink && (
-                  <Link href={provider.apiLink} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" variant="ghost" className="h-7 px-2">
-                      <ArrowRight className="w-3 h-3" />
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">API Key Required</p>
+          <p className="text-xs text-muted-foreground">
+            Add your {provider?.name ?? 'provider'} API key in Profile settings to use this model.
+          </p>
+          <a
+            href="/profile"
+            className="flex items-center gap-2 text-xs text-teal-600 hover:underline"
+          >
+            Go to Profile → API Keys
+          </a>
         </div>
       </PopoverContent>
     </Popover>
   )
 }
 
-export function ModelSelector({ 
-  value, 
-  onValueChange, 
-  apiKeys, 
-  isProPlan, 
+export function ModelSelector({
+  value,
+  onValueChange,
+  availableProviders,
   className,
   placeholder = "Select an AI model",
   showToast = true
 }: ModelSelectorProps) {
-  
+
   const isModelSelectable = (modelId: string) => {
-    return isModelAvailable(modelId, isProPlan, apiKeys)
+    return isModelAvailable(modelId, availableProviders)
   }
 
   const handleModelChange = (modelId: string) => {
@@ -130,7 +82,7 @@ export function ModelSelector({
     if (!selectedModel) return
 
     // Check if model is available for the user
-    if (!isModelAvailable(modelId, isProPlan, apiKeys)) {
+    if (!isModelAvailable(modelId, availableProviders)) {
       if (showToast) {
         const provider = getProviderById(selectedModel.provider)
         toast.error(`Please add your ${provider?.name || selectedModel.provider} API key first`)
@@ -245,4 +197,4 @@ export function ModelSelector({
 }
 
 // Re-export types from centralized location
-export type { AIModel, ApiKey } from '@/lib/ai-models' 
+export type { AIModel } from '@/lib/ai-models' 
