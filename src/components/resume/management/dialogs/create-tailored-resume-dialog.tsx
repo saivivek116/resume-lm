@@ -181,13 +181,25 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
           jobTitle,
           companyName,
           {
-            work_experience: baseResume.work_experience,
+            work_experience: baseResume.work_experience.map(we => ({
+              ...we,
+              location: we.location ?? '',
+              technologies: we.technologies ?? []
+            })),
             education: baseResume.education.map(edu => ({
               ...edu,
-              gpa: edu.gpa?.toString()
+              gpa: edu.gpa?.toString() ?? '',
+              location: edu.location ?? '',
+              achievements: edu.achievements ?? []
             })),
             skills: baseResume.skills,
-            projects: baseResume.projects,
+            projects: baseResume.projects?.map(p => ({
+              ...p,
+              date: p.date ?? '',
+              technologies: p.technologies ?? [],
+              url: p.url ?? '',
+              github_url: p.github_url ?? ''
+            })),
             target_role: baseResume.target_role
           }
         );
