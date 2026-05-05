@@ -1,7 +1,6 @@
 'use client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { SecurityForm } from "./security-form"
-import { ApiKeysForm } from "./api-keys-form"
 import { SubscriptionSection } from "./subscription-section"
 import { DangerZone } from "./danger-zone"
 import { AiPromptsForm } from "./ai-prompts-form"
@@ -14,19 +13,17 @@ import type { SubscriptionSnapshot } from "@/lib/subscription-access"
 const sections = [
   { id: "security", title: "Security", description: "Manage your email and password settings", icon: "🔒" },
   { id: "subscription", title: "Subscription", description: "Manage your subscription and billing settings", icon: "💳" },
-  { id: "api-keys", title: "API Keys", description: "Manage your API keys for different AI providers", icon: "🔑" },
   { id: "ai-prompts", title: "AI Prompts", description: "Customize AI system prompts for different actions", icon: "🤖" },
   { id: "danger-zone", title: "Danger Zone", description: "Irreversible and destructive actions", icon: "⚠️" },
 ]
 
 interface SettingsContentProps {
   user: User | null;
-  isProPlan: boolean;
   subscriptionStatus: string;
   subscriptionSnapshot: SubscriptionSnapshot | null;
 }
 
-export function SettingsContent({ user, isProPlan, subscriptionStatus, subscriptionSnapshot }: SettingsContentProps) {
+export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot }: SettingsContentProps) {
   const [activeSection, setActiveSection] = useState<string>("security")
 
   useEffect(() => {
@@ -116,17 +113,6 @@ export function SettingsContent({ user, isProPlan, subscriptionStatus, subscript
           </CardHeader>
           <CardContent>
             <SubscriptionSection initialProfile={subscriptionSnapshot} />
-          </CardContent>
-        </Card>
-
-        {/* API Keys */}
-        <Card id="api-keys" className="border-white/40 shadow-xl shadow-black/5 bg-white/80 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">API Keys</CardTitle>
-            <CardDescription>Manage your API keys for different AI providers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ApiKeysForm isProPlan={isProPlan} />
           </CardContent>
         </Card>
 

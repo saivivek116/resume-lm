@@ -1,6 +1,8 @@
 'use client';
 
 import { Profile, WorkExperience, Education, Project, DEFAULT_DOCUMENT_SETTINGS, ResumeSectionId } from "@/lib/types";
+import type { ServiceName } from '@/lib/types';
+import { ProfileApiKeysForm } from '@/components/profile/profile-api-keys-form';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { User, Linkedin, Briefcase, GraduationCap, Wrench, FolderGit2, Upload, Save, Trash2, Settings2, Award} from "lucide-react";
+import { User, Linkedin, Briefcase, GraduationCap, Wrench, FolderGit2, Upload, Save, Trash2, Settings2, Award, Key} from "lucide-react";
 
 import {
   Dialog,
@@ -32,7 +34,6 @@ import { ProfileDocumentSettingsForm } from "@/components/profile/profile-docume
 import { formatProfileWithAI } from "../../utils/actions/profiles/ai";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-import { ProUpgradeButton } from "@/components/settings/pro-upgrade-button";
 import { AlertTriangle } from "lucide-react";
 import { importResume, updateProfile } from "@/utils/actions/profiles/actions";
 import { cn, withBasePath } from "@/lib/utils";
@@ -40,9 +41,10 @@ import pdfToText from "react-pdftotext";
 
 interface ProfileEditFormProps {
   profile: Profile;
+  keyStatus: Record<ServiceName, boolean>;
 }
 
-export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProps) {
+export function ProfileEditForm({ profile: initialProfile, keyStatus }: ProfileEditFormProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -150,23 +152,8 @@ export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProp
     try {
       setIsProcessingResume(true);
       
-      // Get model and API key from local storage
-      const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-      
-      const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY) || 'claude-sonnet-4-20250514';
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-      
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
-      
       const result = await formatProfileWithAI(content, {
-        model: selectedModel,
-        apiKeys
+        model: 'deepseek/deepseek-v3.2:nitro'
       });
       
       if (result) {
@@ -253,7 +240,7 @@ export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProp
         console.error('Resume upload error:', error);
         if (error.message.toLowerCase().includes('api key')) {
           setApiKeyError(
-            'API key required. Please add your OpenAI API key in settings or upgrade to our Pro Plan.'
+            'API key required. Please add your API key in the API Keys tab of your Profile.'
           );
         } else {
           toast.error("Failed to process content: " + error.message, {
@@ -520,17 +507,13 @@ export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProp
                           <p className="font-medium">API Key Required</p>
                           <p className="text-red-500/90">{apiKeyError}</p>
                           <div className="mt-2 flex flex-col gap-2 justify-start">
-                            <div className="w-auto mx-auto">
-                              <ProUpgradeButton />
-                            </div>
-                            <div className="text-center text-xs text-red-400">or</div>
                             <Button
                               variant="outline"
                               size="sm"
                               className="text-red-600 border-red-200 hover:bg-red-50/50 w-auto mx-auto"
-                              onClick={() => window.location.href = withBasePath('/settings')}
+                              onClick={() => window.location.href = withBasePath('/profile')}
                             >
-                              Set API Keys in Settings
+                              Go to API Keys Tab
                             </Button>
                           </div>
                         </div>
@@ -648,17 +631,13 @@ export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProp
                           <p className="font-medium">API Key Required</p>
                           <p className="text-red-500/90">{apiKeyError}</p>
                           <div className="mt-2 flex flex-col gap-2 justify-start">
-                            <div className="w-auto mx-auto">
-                              <ProUpgradeButton />
-                            </div>
-                            <div className="text-center text-xs text-red-400">or</div>
                             <Button
                               variant="outline"
                               size="sm"
                               className="text-red-600 border-red-200 hover:bg-red-50/50 w-auto mx-auto"
-                              onClick={() => window.location.href = withBasePath('/settings')}
+                              onClick={() => window.location.href = withBasePath('/profile')}
                             >
-                              Set API Keys in Settings
+                              Go to API Keys Tab
                             </Button>
                           </div>
                         </div>
@@ -808,6 +787,10 @@ export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProp
                     <div className="absolute -bottom-2 left-0 right-0 h-0.5 rounded-full bg-amber-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
                   </span>
                 </TabsTrigger>
+                <TabsTrigger value="api-keys">
+                  <Key className="h-4 w-4" />
+                  <span className="hidden sm:inline">API Keys</span>
+                </TabsTrigger>
               </TabsList>
               <div className="relative">
                 {/* Content gradient overlay */}
@@ -903,6 +886,10 @@ export function ProfileEditForm({ profile: initialProfile }: ProfileEditFormProp
                         />
                       </div>
                     </Card>
+                  </TabsContent>
+
+                  <TabsContent value="api-keys">
+                    <ProfileApiKeysForm keyStatus={keyStatus} />
                   </TabsContent>
                 </div>
               </div>

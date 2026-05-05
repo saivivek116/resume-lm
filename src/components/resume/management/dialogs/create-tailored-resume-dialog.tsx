@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { useDefaultModel } from "@/hooks/use-api-keys";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface CreateTailoredResumeDialogProps {
 }
 
 export function CreateTailoredResumeDialog({ children, baseResumes, profile }: CreateTailoredResumeDialogProps) {
+  const { defaultModel } = useDefaultModel();
   const [open, setOpen] = useState(false);
   const [selectedBaseResume, setSelectedBaseResume] = useState<string>(baseResumes?.[0]?.id || '');
   const [jobDescription, setJobDescription] = useState('');
@@ -122,25 +124,10 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
         let companyName = '';
 
         if (jobDescription.trim()) {
-          // Get model and API key from local storage
-          const MODEL_STORAGE_KEY = 'resumelm-default-model';
-          const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
-          const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-          const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-          let apiKeys = [];
-
-          try {
-            apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-          } catch (error) {
-            console.error('Error parsing API keys:', error);
-          }
-
           try {
             setCurrentStep('analyzing');
             const formattedJobListing = await formatJobListing(jobDescription, {
-              model: selectedModel || '',
-              apiKeys
+              model: defaultModel || '',
             });
 
             setCurrentStep('formatting');
@@ -202,25 +189,11 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
         return;
       }
 
-      // Get model and API key from local storage
-      const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
-      const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
       // 1. Format the job listing
       let formattedJobListing;
       try {
         formattedJobListing = await formatJobListing(jobDescription, {
-          model: selectedModel || '',
-          apiKeys
+          model: defaultModel || '',
         });
       } catch (error: Error | unknown) {
         if (error instanceof Error && (
@@ -264,8 +237,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
 
       try {
         tailoredContent = await tailorResumeToJob(baseResume, formattedJobListing, {
-          model: selectedModel || '',
-          apiKeys
+          model: defaultModel || '',
         });
       } catch (error: Error | unknown) {
         if (error instanceof Error && (

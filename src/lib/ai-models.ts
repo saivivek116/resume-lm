@@ -30,7 +30,6 @@ export interface AIModel {
     maxTokens?: number
     supportsVision?: boolean
     supportsTools?: boolean
-    isPro?: boolean
   }
   availability: {
     requiresApiKey: boolean
@@ -46,7 +45,6 @@ export interface ApiKey {
 
 export interface AIConfig {
   model: string
-  apiKeys: ApiKey[]
   customPrompts?: import('./types').CustomPrompts
 }
 
@@ -122,8 +120,7 @@ export const AI_MODELS: AIModel[] = [
       isUnstable: false,
       maxTokens: 400000,
       supportsVision: true,
-      supportsTools: true,
-      isPro: true
+      supportsTools: true
     },
     availability: {
       requiresApiKey: true,
@@ -351,8 +348,7 @@ export const AI_MODELS: AIModel[] = [
       isUnstable: false,
       maxTokens: 200000,
       supportsVision: true,
-      supportsTools: true,
-      isPro: true
+      supportsTools: true
     },
     availability: {
       requiresApiKey: true,
@@ -391,10 +387,7 @@ const MODEL_ALIASES: Record<string, string> = {
 // Default Model Configuration
 // ========================
 
-export const DEFAULT_MODELS = {
-  PRO_USER: 'gpt-5.2',
-  FREE_USER: 'deepseek/deepseek-v3.2:nitro'
-} as const
+export const DEFAULT_MODEL = 'deepseek/deepseek-v3.2:nitro' as const
 
 // ========================
 // Model Designations for Different Use Cases
@@ -463,13 +456,9 @@ export function getModelsByProvider(provider: ServiceName): AIModel[] {
  */
 export function isModelAvailable(
   modelId: string,
-  isPro: boolean,
-  apiKeys: ApiKey[]
+  availableProviders: ServiceName[]
 ): boolean {
   modelId = MODEL_ALIASES[modelId] || modelId
-  // Pro users have access to all models
-  if (isPro) return true
-
   const model = getModelById(modelId)
   if (!model) return false
 
@@ -478,18 +467,18 @@ export function isModelAvailable(
 
   // Check if this is an OpenRouter model (contains forward slash)
   if (modelId.includes('/')) {
-    return apiKeys.some(key => key.service === 'openrouter')
+    return availableProviders.includes('openrouter')
   }
 
-  // Check if user has the required API key
-  return apiKeys.some(key => key.service === model.provider)
+  // Check if user has the required provider
+  return availableProviders.includes(model.provider)
 }
 
 /**
  * Get the default model for a user type
  */
-export function getDefaultModel(isPro: boolean): string {
-  return isPro ? DEFAULT_MODELS.PRO_USER : DEFAULT_MODELS.FREE_USER
+export function getDefaultModel(): string {
+  return DEFAULT_MODEL
 }
 
 /**
@@ -534,8 +523,8 @@ export function groupModelsByProvider(): GroupedModels[] {
 /**
  * Get selectable models for a user
  */
-export function getSelectableModels(isPro: boolean, apiKeys: ApiKey[]): AIModel[] {
-  return AI_MODELS.filter(model => isModelAvailable(model.id, isPro, apiKeys))
+export function getSelectableModels(availableProviders: ServiceName[]): AIModel[] {
+  return AI_MODELS.filter(model => isModelAvailable(model.id, availableProviders))
 }
 
 /**
