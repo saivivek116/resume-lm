@@ -28,7 +28,6 @@ interface AppHeaderProps {
 export function AppHeader({
   children,
   showUpgradeButton = true,
-  isProPlan = false,
   upgradeButtonVariant = 'upgrade',
 }: AppHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);

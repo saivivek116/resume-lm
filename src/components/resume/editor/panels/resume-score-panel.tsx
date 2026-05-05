@@ -11,8 +11,6 @@ import { useState, useEffect, useMemo } from "react";
 import { generateResumeScore } from "@/utils/actions/resumes/actions";
 import { Resume, Job as JobType } from "@/lib/types";
 import { useDefaultModel } from "@/hooks/use-api-keys";
-import { getAvailableProviders } from "@/utils/actions/api-keys/actions";
-import type { ServiceName } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 
 export interface ResumeScoreMetrics {
@@ -214,10 +212,6 @@ function updateStoredScores(resumeId: string, entry: StoredScoreEntry) {
 
 export default function ResumeScorePanel({ resume, job }: ResumeScorePanelProps) {
   const { defaultModel } = useDefaultModel();
-  const [availableProviders, setAvailableProviders] = useState<ServiceName[]>([]);
-  useEffect(() => {
-    getAvailableProviders().then(setAvailableProviders);
-  }, []);
   const selectedModel = useMemo(() => defaultModel, [defaultModel]);
   const scoreSignature = useMemo(
     () => createScoreSignature(resume, job, selectedModel),

@@ -9,7 +9,6 @@ import { AIConfig } from "@/utils/ai-tools";
 import { generateObject } from "ai";
 import { initializeAIClient } from "@/utils/ai-tools";
 import { resumeScoreSchema } from "@/lib/zod-schemas";
-import { getSubscriptionPlan } from "../stripe/actions";
 import { getDefaultModel } from "@/lib/ai-models";
 import { getSubscriptionAccessState } from "@/lib/subscription-access";
 import {
