@@ -2,8 +2,6 @@ import { LanguageModelV1, ToolInvocation, smoothStream, streamText } from 'ai';
 import { Resume, Job } from '@/lib/types';
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { tools } from '@/lib/tools';
-import { getSubscriptionPlan } from '@/utils/actions/stripe/actions';
-import { checkRateLimit } from '@/lib/rateLimiter';
 import { AI_ASSISTANT_SYSTEM_MESSAGE } from '@/lib/prompts';
 
 interface Message {
@@ -25,38 +23,15 @@ export async function POST(req: Request) {
     const requestBody = await req.json();
     const { messages, target_role, config, job, resume }: ChatRequest = requestBody;
 
-    // Get subscription plan and user ID
-    const { plan, id } = await getSubscriptionPlan(true);
-    const isPro = plan === 'pro';
-
-    // Apply rate limiting only for Pro users
-    if (isPro) {
-      try {
-        await checkRateLimit(id);
-      } catch (error) {
-        // Add type checking for error
-        const message = error instanceof Error ? error.message : 'Rate limit exceeded';
-        const match = message.match(/(\d+) seconds/);
-        const retryAfter = match ? parseInt(match[1], 10) : 60;
-        
-        return new Response(
-          JSON.stringify({ 
-            error: message, // Use validated message
-            expirationTimestamp: Date.now() + retryAfter * 1000
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              "Retry-After": String(retryAfter),
-            },
-          }
-        );
-      }
+    if (!config) {
+      return new Response(
+        JSON.stringify({ error: 'AI configuration is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Initialize the AI client using the provided config and plan.
-    const aiClient = initializeAIClient(config, isPro);
+    // Initialize the AI client using the provided config.
+    const aiClient = await initializeAIClient(config);
 
     // Some models (e.g., GPT-5 family / GPT-5 Mini) only support the default temperature (1)
     const requiresDefaultTemp = ['gpt-5-mini-2025-08-07', 'gpt-5', 'gpt-5.2', 'gpt-5.2-pro'].includes(config?.model ?? '');

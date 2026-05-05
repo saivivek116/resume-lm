@@ -9,22 +9,20 @@ import {
 import { Job, Resume } from "@/lib/types";
 import { AIConfig } from '@/utils/ai-tools';
 import { initializeAIClient } from '@/utils/ai-tools';
-import { getSubscriptionPlan } from '../stripe/actions';
-import { checkRateLimit } from '@/lib/rateLimiter';
 
 // Build model candidates list - prioritize user's selected model if provided
 function getModelCandidates(config?: AIConfig) {
   const fallbackModels: AIConfig[] = [
-    { model: 'z-ai/glm-4.6:exacto', apiKeys: config?.apiKeys || [] },
-    { model: 'openai/gpt-5-nano', apiKeys: config?.apiKeys || [] },
-    { model: 'openai/gpt-oss-120b', apiKeys: config?.apiKeys || [] },
-    { model: 'openai/gpt-oss-20b', apiKeys: config?.apiKeys || [] },
-    { model: 'deepseek/deepseek-v3.2:nitro', apiKeys: config?.apiKeys || [] },
+    { model: 'z-ai/glm-4.6:exacto' },
+    { model: 'openai/gpt-5-nano' },
+    { model: 'openai/gpt-oss-120b' },
+    { model: 'openai/gpt-oss-20b' },
+    { model: 'deepseek/deepseek-v3.2:nitro' },
   ];
 
   // If user has a model selected, try it first before fallbacks
   const modelCandidates: AIConfig[] = config?.model
-    ? [{ model: config.model, apiKeys: config.apiKeys || [] }, ...fallbackModels]
+    ? [{ model: config.model }, ...fallbackModels]
     : fallbackModels;
   return modelCandidates;
 }
@@ -34,13 +32,8 @@ export async function tailorResumeToJob(
   jobListing: z.infer<typeof simplifiedJobSchema>,
   config?: AIConfig
 ) {
-  const { plan, id } = await getSubscriptionPlan(true);
-  const isPro = plan === 'pro';
   const overallStart = Date.now();
   const modelCandidates = getModelCandidates(config);
-
-  // Check rate limit once per tailoring request
-  await checkRateLimit(id);
 
   let lastError: unknown;
 
@@ -49,9 +42,9 @@ export async function tailorResumeToJob(
     try {
       start = Date.now();
       console.log(
-        `[TAILOR][TRY] ${candidate.model} | STEP: Tailoring resume content | Subscription: ${isPro ? 'PRO' : 'FREE'}`
+        `[TAILOR][TRY] ${candidate.model} | STEP: Tailoring resume content`
       );
-      const aiClient = isPro ? initializeAIClient(candidate, isPro, true) : initializeAIClient(candidate);
+      const aiClient = await initializeAIClient(candidate);
       const { object } = await generateObject({
         model: aiClient as LanguageModelV1,
         temperature: 0.5, // reduced for structured output reliability
@@ -186,13 +179,8 @@ Remove any internal notes/annotations; final output should be clean, professiona
 }
 
 export async function formatJobListing(jobListing: string, config?: AIConfig) {
-  const { plan, id } = await getSubscriptionPlan(true);
-  const isPro = plan === 'pro';
   const overallStart = Date.now();
   const modelCandidates = getModelCandidates(config);
-
-  // Check rate limit once per formatting request
-  await checkRateLimit(id);
 
   let lastError: unknown;
 
@@ -201,10 +189,9 @@ export async function formatJobListing(jobListing: string, config?: AIConfig) {
     try {
       start = Date.now();
       console.log(
-        `[FORMAT][TRY] ${candidate.model} | STEP: Analyzing job description → Formatting requirements | Subscription: ${isPro ? 'PRO' : 'FREE'
-        }`
+        `[FORMAT][TRY] ${candidate.model} | STEP: Analyzing job description → Formatting requirements`
       );
-      const aiClient = isPro ? initializeAIClient(candidate, isPro, true) : initializeAIClient(candidate);
+      const aiClient = await initializeAIClient(candidate);
       const { object } = await generateObject({
         model: aiClient as LanguageModelV1,
         temperature: 0.7, // reduced for better structured output compatibility

@@ -2,12 +2,13 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { LanguageModelV1 } from 'ai';
-import { 
-  getModelById, 
+import {
+  getModelById,
   getProviderById,
   type AIModel,
   type AIConfig
 } from '@/lib/ai-models';
+import { getDecryptedApiKey } from '@/utils/actions/api-keys/actions';
 
 // Re-export types for backward compatibility
 export type { ApiKey, AIConfig } from '@/lib/ai-models';
@@ -26,167 +27,56 @@ const HIDDEN_MODELS: Record<string, HiddenModel> = {
       supportsTools: true,
     },
     availability: {
-      requiresApiKey: false,
+      requiresApiKey: true,
       requiresPro: false,
     },
   },
 };
 
-/**
- * Initializes an AI client based on the provided configuration
- * Falls back to default OpenAI configuration if no config is provided
- */
-export function initializeAIClient(config?: AIConfig, isPro?: boolean, useThinking?: boolean) {
-  void useThinking; // Keep for future use
-
-  // Handle Pro subscription with environment variables
-  if (isPro && config) {
-    const { model } = config;
-    const modelData = getModelById(model) ?? HIDDEN_MODELS[model];
-    const resolvedModelId = modelData?.id ?? model;
-    const provider = modelData ? getProviderById(modelData.provider) : undefined;
-    
-    if (!modelData || !provider) {
-      throw new Error(`Unknown model: ${model}`);
-    }
-
-    // Get the environment key and check if it exists
-    const envKey = process.env[provider.envKey];
-    if (!envKey) {
-      throw new Error(`${provider.name} API key not found (${provider.envKey})`);
-    }
-
-    // Create the appropriate SDK client based on provider
-    switch (provider.id) {
-      case 'anthropic':
-        return createAnthropic({ apiKey: envKey })(resolvedModelId) as LanguageModelV1;
-      
-      case 'openai':
-        // Check if this is actually an OpenRouter model (contains forward slash)
-        if (resolvedModelId.includes('/')) {
-          // Use OpenRouter for models with provider prefix
-          const openRouterKey = process.env.OPENROUTER_API_KEY;
-          if (!openRouterKey) {
-            throw new Error('OpenRouter API key not found (OPENROUTER_API_KEY)');
-          }
-          return createOpenRouter({
-            apiKey: openRouterKey,
-            baseURL: 'https://openrouter.ai/api/v1',
-            headers: {
-              'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-              'X-Title': 'ResumeLM'
-            },
-          })(resolvedModelId) as LanguageModelV1;
-        }
-        // Regular OpenAI models
-        return createOpenAI({ 
-          apiKey: envKey,
-          compatibility: 'strict'
-        })(resolvedModelId) as LanguageModelV1;
-      
-      case 'openrouter':
-        return createOpenRouter({
-          apiKey: envKey,
-          baseURL: 'https://openrouter.ai/api/v1',
-          headers: {
-            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-            'X-Title': 'ResumeLM'
-          }
-        })(resolvedModelId) as LanguageModelV1;
-      
-      default:
-        throw new Error(`Unsupported provider: ${provider.id}`);
-    }
-  }
-
-  // Existing logic for free users
-  if (!config) {
-    return createOpenAI({ apiKey: '' })('no-model') as LanguageModelV1;
-  }
-
-  const { model, apiKeys } = config;
-  const modelData = getModelById(model) ?? HIDDEN_MODELS[model];
-  const resolvedModelId = modelData?.id ?? model;
+export async function initializeAIClient(config: AIConfig): Promise<LanguageModelV1> {
+  const modelData = getModelById(config.model) ?? HIDDEN_MODELS[config.model];
+  const resolvedModelId = modelData?.id ?? config.model;
   const provider = modelData ? getProviderById(modelData.provider) : undefined;
-  
+
   if (!modelData || !provider) {
-    throw new Error(`Unknown model: ${model}`);
-  }
-  
-  // Special case: free-tier models (e.g., GPT-5 Mini) skip user key requirement
-  // Also allow GPT OSS models to use server-side OpenRouter key
-  if (modelData.features.isFree || resolvedModelId.includes('/')) {
-    // For OpenRouter models (with slash), use OpenRouter key
-    if (resolvedModelId.includes('/')) {
-      const openRouterKey = process.env.OPENROUTER_API_KEY;
-      if (!openRouterKey) throw new Error('OpenRouter API key not found');
-      
-      return createOpenRouter({
-        apiKey: openRouterKey,
-        baseURL: 'https://openrouter.ai/api/v1',
-        headers: {
-          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-          'X-Title': 'ResumeLM'
-        }
-      })(resolvedModelId) as LanguageModelV1;
-    }
-    
-    // For regular free models like GPT 4.1 Nano
-    const envKey = process.env[provider.envKey];
-    if (!envKey) throw new Error(`${provider.name} API key not found`);
-    
-    if (provider.id === 'openai') {
-      return createOpenAI({ 
-        apiKey: envKey,
-        compatibility: 'strict',
-      })(resolvedModelId) as LanguageModelV1;
-    }
-  }
-  
-  // For non-free models, user must provide their own API key
-  const userApiKey = apiKeys.find(k => k.service === provider.id)?.key;
-  if (!userApiKey) {
-    throw new Error(`${provider.name} API key not found in user configuration`);
+    throw new Error(`Unknown model: ${config.model}`);
   }
 
-  // Create the appropriate SDK client based on provider
+  // All models with a slash in their ID go through OpenRouter
+  if (resolvedModelId.includes('/')) {
+    const apiKey = await getDecryptedApiKey('openrouter');
+    if (!apiKey) {
+      throw new Error('Add your OpenRouter API key in Profile settings to use this model');
+    }
+    return createOpenRouter({
+      apiKey,
+      baseURL: 'https://openrouter.ai/api/v1',
+      headers: {
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+        'X-Title': 'ResumeLM',
+      },
+    })(resolvedModelId) as LanguageModelV1;
+  }
+
+  const apiKey = await getDecryptedApiKey(provider.id);
+  if (!apiKey) {
+    throw new Error(`Add your ${provider.name} API key in Profile settings to use this model`);
+  }
+
   switch (provider.id) {
     case 'anthropic':
-      return createAnthropic({ apiKey: userApiKey })(resolvedModelId) as LanguageModelV1;
-    
+      return createAnthropic({ apiKey })(resolvedModelId) as LanguageModelV1;
     case 'openai':
-      // Check if this is actually an OpenRouter model (contains forward slash)
-      if (resolvedModelId.includes('/')) {
-        // Use OpenRouter for models with provider prefix
-        const openRouterKey = apiKeys.find(k => k.service === 'openrouter')?.key;
-        if (!openRouterKey) {
-          throw new Error('OpenRouter API key not found in user configuration');
-        }
-        return createOpenRouter({
-          apiKey: openRouterKey,
-          baseURL: 'https://openrouter.ai/api/v1',
-          headers: {
-            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-            'X-Title': 'ResumeLM'
-          }
-        })(resolvedModelId) as LanguageModelV1;
-      }
-      // Regular OpenAI models
-      return createOpenAI({ 
-        apiKey: userApiKey,
-        compatibility: 'strict'
-      })(resolvedModelId) as LanguageModelV1;
-    
+      return createOpenAI({ apiKey, compatibility: 'strict' })(resolvedModelId) as LanguageModelV1;
     case 'openrouter':
       return createOpenRouter({
-        apiKey: userApiKey,
+        apiKey,
         baseURL: 'https://openrouter.ai/api/v1',
         headers: {
           'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-          'X-Title': 'ResumeLM'
-        }
+          'X-Title': 'ResumeLM',
+        },
       })(resolvedModelId) as LanguageModelV1;
-    
     default:
       throw new Error(`Unsupported provider: ${provider.id}`);
   }

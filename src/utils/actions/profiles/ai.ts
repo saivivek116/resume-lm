@@ -3,7 +3,7 @@ import { generateObject, LanguageModelV1 } from 'ai';
 import { z } from 'zod';
 import { RESUME_FORMATTER_SYSTEM_MESSAGE } from "@/lib/prompts";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
-import { getSubscriptionPlan } from '@/utils/actions/stripe/actions';
+import { getDefaultModel } from '@/lib/ai-models';
 import { sanitizeUnknownStrings } from '@/lib/utils';
 
 // TEXT RESUME -> PROFILE
@@ -12,9 +12,7 @@ export async function formatProfileWithAI(
   config?: AIConfig
 ) {
     try {
-      const subscriptionPlan = await getSubscriptionPlan();
-      const isPro = subscriptionPlan === 'pro';
-      const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+      const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
   
       
       const { object } = await generateObject({

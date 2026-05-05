@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { useDefaultModel } from "@/hooks/use-api-keys";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ interface CreateBaseResumeDialogProps {
 }
 
 export function CreateBaseResumeDialog({ children, profile }: CreateBaseResumeDialogProps) {
+  const { defaultModel } = useDefaultModel();
   const [open, setOpen] = useState(false);
   const [targetRole, setTargetRole] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -159,23 +161,9 @@ export function CreateBaseResumeDialog({ children, profile }: CreateBaseResumeDi
           has_cover_letter: false,
         };
 
-        // Get model and API key from local storage
-        const MODEL_STORAGE_KEY = 'resumelm-default-model';
-        const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-        const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-        const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-        let apiKeys = [];
-        try {
-          apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-        } catch (error) {
-          console.error('Error parsing API keys:', error);
-        }
-
-
         try {
           const convertedResume = await convertTextToResume(resumeText, emptyResume, targetRole, {
-            model: selectedModel || '',
-            apiKeys
+            model: defaultModel || '',
           });
           
           // Extract content sections and basic info for createBaseResume

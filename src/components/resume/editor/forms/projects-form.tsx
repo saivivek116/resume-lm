@@ -178,20 +178,12 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
     setLoadingSortAI((prev) => ({ ...prev, [projIndex]: true }));
     try {
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       const { sortedIndices } = await sortBulletsByImpact(
         project.description,
         { projectName: project.name },
-        { model: selectedModel || '', apiKeys }
+        { model: selectedModel || '' }
       );
 
       const permuteInner = <T,>(arr: Record<number, T> | undefined) => {
@@ -245,19 +237,8 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
     setPopoverOpen(prev => ({ ...prev, [index]: false }));
     
     try {
-      // Get model and API key from local storage
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       const result = await generateProjectPoints(
         project.name,
@@ -267,7 +248,6 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
         config.customPrompt,
         {
           model: selectedModel || '',
-          apiKeys
         }
       );
       
@@ -334,21 +314,10 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
     
     try {
       const MODEL_STORAGE_KEY = 'resumelm-default-model';
-      const LOCAL_STORAGE_KEY = 'resumelm-api-keys';
-
       const selectedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-      const storedKeys = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let apiKeys = [];
-
-      try {
-        apiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (error) {
-        console.error('Error parsing API keys:', error);
-      }
 
       const improvedPoint = await improveProject(point, customPrompt, {
         model: selectedModel || '',
-        apiKeys
       });
 
       setImprovedPoints(prev => ({

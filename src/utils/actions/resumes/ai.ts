@@ -6,36 +6,30 @@ import { bulletImpactSortSchema, textImportSchema, workExperienceBulletPointsSch
 import { generateObject, type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
-import { getSubscriptionPlan } from "@/utils/actions/stripe/actions";
+import { getDefaultModel } from "@/lib/ai-models";
 import { BULLET_IMPACT_SORTER_MESSAGE, PROJECT_GENERATOR_MESSAGE, PROJECT_IMPROVER_MESSAGE, TEXT_ANALYZER_SYSTEM_MESSAGE, WORK_EXPERIENCE_GENERATOR_MESSAGE, WORK_EXPERIENCE_IMPROVER_MESSAGE } from "@/lib/prompts";
 import { projectAnalysisSchema, workExperienceItemsSchema } from "@/lib/zod-schemas";
 import { WorkExperience } from "@/lib/types";
-import { getDefaultModel } from "@/lib/ai-models";
 
 
 
 // Base Resume Creation
 // TEXT CONTENT -> RESUME
 export async function convertTextToResume(prompt: string, existingResume: Resume, targetRole: string, config?: AIConfig) {
-  const subscriptionPlan = await getSubscriptionPlan();
-  const isPro = subscriptionPlan === 'pro';
-  const fallbackModel = getDefaultModel(isPro);
+  const fallbackModel = getDefaultModel();
   const resolvedConfig: AIConfig = {
     model: config?.model || fallbackModel,
-    apiKeys: config?.apiKeys || [],
     ...(config?.customPrompts ? { customPrompts: config.customPrompts } : {})
   };
 
   let aiClient: LanguageModelV1;
   try {
-    aiClient = initializeAIClient(resolvedConfig, isPro, isPro);
+    aiClient = await initializeAIClient(resolvedConfig);
   } catch (error) {
     if (resolvedConfig.model !== fallbackModel) {
       console.warn(`Falling back to default model (${fallbackModel}) after failing to init ${resolvedConfig.model}:`, error);
-      aiClient = initializeAIClient(
-        { ...resolvedConfig, model: fallbackModel },
-        isPro,
-        isPro
+      aiClient = await initializeAIClient(
+        { ...resolvedConfig, model: fallbackModel }
       );
     } else {
       throw error;
@@ -110,10 +104,8 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
       numPoints: number = 3,
       customPrompt: string = '',
       config?: AIConfig
-    ) { 
-      const subscriptionPlan = await getSubscriptionPlan();
-      const isPro = subscriptionPlan === 'pro';
-      const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+    ) {
+      const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
   
       // Use custom prompt if provided in config, otherwise fall back to default
       const systemPrompt = config?.customPrompts?.workExperienceGenerator 
@@ -137,9 +129,7 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
     
       // WORK EXPERIENCE BULLET POINTS IMPROVEMENT
       export async function improveWorkExperience(point: string, customPrompt?: string, config?: AIConfig) {
-          const subscriptionPlan = await getSubscriptionPlan();
-          const isPro = subscriptionPlan === 'pro';
-          const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+          const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
           
           // Use custom prompt if provided in config, otherwise fall back to default
           const systemPrompt = config?.customPrompts?.workExperienceImprover 
@@ -161,10 +151,7 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
     
       // PROJECT BULLET POINTS IMPROVEMENT
       export async function improveProject(point: string, customPrompt?: string, config?: AIConfig) {
-          
-          const subscriptionPlan = await getSubscriptionPlan();
-          const isPro = subscriptionPlan === 'pro';
-          const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+          const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
 
           // Use custom prompt if provided in config, otherwise fall back to default
           const systemPrompt = config?.customPrompts?.projectImprover 
@@ -191,10 +178,8 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
           customPrompt: string = '',
           config?: AIConfig
       ) {
-          const subscriptionPlan = await getSubscriptionPlan();
-          const isPro = subscriptionPlan === 'pro';
-          const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
-          
+          const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
+
           // Use custom prompt if provided in config, otherwise fall back to default
           const systemPrompt = config?.customPrompts?.projectGenerator 
             ?? (PROJECT_GENERATOR_MESSAGE.content as string);
@@ -216,7 +201,7 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
       
       // Text Import for profile
       export async function processTextImport(text: string, config?: AIConfig) {
-          const aiClient = initializeAIClient(config);
+          const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
           
           // Use custom prompt if provided in config, otherwise fall back to default
           const systemPrompt = config?.customPrompts?.textAnalyzer 
@@ -240,10 +225,8 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
           prompt: string,
           config?: AIConfig
       ) {
-          const subscriptionPlan = await getSubscriptionPlan();
-          const isPro = subscriptionPlan === 'pro';
-          const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
-          
+          const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
+
           const { object } = await generateObject({
           model: aiClient,
           schema: z.object({
@@ -261,10 +244,8 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
       
       // ADDING TEXT CONTENT TO RESUME
       export async function addTextToResume(prompt: string, existingResume: Resume, config?: AIConfig) {
-          const subscriptionPlan = await getSubscriptionPlan();
-          const isPro = subscriptionPlan === 'pro';
-          const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
-  
+          const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
+
           // Use custom prompt if provided in config, otherwise fall back to default
           const systemPrompt = config?.customPrompts?.textAnalyzer 
             ?? (TEXT_ANALYZER_SYSTEM_MESSAGE.content as string);
@@ -308,9 +289,7 @@ export async function sortBulletsByImpact(
   context: { role?: string; targetRole?: string; company?: string; projectName?: string },
   config?: AIConfig
 ) {
-  const subscriptionPlan = await getSubscriptionPlan();
-  const isPro = subscriptionPlan === 'pro';
-  const aiClient = isPro ? initializeAIClient(config, isPro) : initializeAIClient(config);
+  const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
 
   const numbered = bullets.map((b, i) => `[${i}] ${b}`).join('\n');
   const ctxLine = [

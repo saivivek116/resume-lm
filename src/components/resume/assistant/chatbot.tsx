@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import { Card } from "@/components/ui/card";
 import { Bot, Trash2, Pencil, ChevronDown, RefreshCw } from "lucide-react";
@@ -34,7 +34,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ApiKeyErrorAlert } from '@/components/ui/api-key-error-alert';
 import { Textarea } from '@/components/ui/textarea';
-import { useApiKeys, useDefaultModel } from '@/hooks/use-api-keys';
+import { useDefaultModel } from '@/hooks/use-api-keys';
+import { getAvailableProviders } from '@/utils/actions/api-keys/actions';
+import type { ServiceName } from '@/lib/types';
 import { useCustomPrompts } from '@/hooks/use-custom-prompts';
 
 interface ChatBotProps {
@@ -70,8 +72,11 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
   const [accordionValue, setAccordionValue] = React.useState<string>("");
   
   // Use synchronized hooks for instant updates when settings change
-  const { apiKeys } = useApiKeys();
   const { defaultModel } = useDefaultModel();
+  const [availableProviders, setAvailableProviders] = useState<ServiceName[]>([]);
+  useEffect(() => {
+    getAvailableProviders().then(setAvailableProviders);
+  }, []);
   const { customPrompts } = useCustomPrompts();
   
   const [originalResume, setOriginalResume] = React.useState<Resume | null>(null);
@@ -82,7 +87,6 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
 
   const config = {
     model: defaultModel,
-    apiKeys,
     customPrompts: Object.keys(customPrompts).length > 0 ? customPrompts : undefined,
   };
   
