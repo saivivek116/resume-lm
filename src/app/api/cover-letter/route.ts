@@ -99,8 +99,8 @@ export async function POST(req: Request) {
       prompt: input,
       onFinish: ({ usage }) => {
         console.log('----------Cover Letter Usage:----------');
-        console.log('Input tokens:', usage.inputTokens);
-        console.log('Output tokens:', usage.outputTokens);
+        console.log('Usage:', usage);
+        // console.log('Output tokens:', usage.outputTokens);
       },
     });
 
