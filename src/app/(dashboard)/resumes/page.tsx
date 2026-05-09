@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { MiniResumePreview } from "@/components/resume/shared/mini-resume-preview";
 import { ResumeSortControls } from "@/components/resume/management/resume-sort-controls";
 import type { SortOption, SortDirection } from "@/components/resume/management/resume-sort-controls";
+import { ResumeSearchInput } from "@/components/resume/management/resume-search-input";
 
 const RESUMES_PER_PAGE = 12;
 
@@ -18,17 +19,23 @@ export default async function ResumesPage({
   searchParams: Promise<SearchParams>
 }) {
   const params = await searchParams;
-  
+
   const { baseResumes, tailoredResumes } = await getDashboardData();
-  
+
   // Combine and sort resumes
   const allResumes = [...baseResumes, ...tailoredResumes];
   const currentPage = Number(params.page) || 1;
   const sort = (params.sort as SortOption) || 'createdAt';
   const direction = (params.direction as SortDirection) || 'desc';
+  const search = (params.search as string) || '';
+
+  // Filter by search query
+  const filteredResumes = search
+    ? allResumes.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
+    : allResumes;
 
   // Sort resumes
-  const sortedResumes = allResumes.sort((a, b) => {
+  const sortedResumes = filteredResumes.sort((a, b) => {
     const modifier = direction === 'asc' ? 1 : -1;
     switch (sort) {
       case 'name':
@@ -65,6 +72,9 @@ export default async function ResumesPage({
           </div>
           
           <div className="flex items-center gap-4">
+            <Suspense>
+              <ResumeSearchInput />
+            </Suspense>
             <Suspense>
               <ResumeSortControls />
             </Suspense>
@@ -110,7 +120,7 @@ export default async function ResumesPage({
             {[...Array(totalPages)].map((_, i) => (
               <Link
                 key={i}
-                href={`?page=${i + 1}&sort=${sort}&direction=${direction}`}
+                href={`?page=${i + 1}&sort=${sort}&direction=${direction}${search ? `&search=${encodeURIComponent(search)}` : ''}`}
                 className={cn(
                   "px-4 py-2 rounded-lg transition-colors",
                   currentPage === i + 1

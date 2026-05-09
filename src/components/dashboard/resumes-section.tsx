@@ -1,8 +1,9 @@
 'use client';
 
-import { Trash2, Copy, FileText, Sparkles, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Trash2, Copy, FileText, Sparkles, ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { MiniResumePreview } from '@/components/resume/shared/mini-resume-preview';
@@ -99,6 +100,14 @@ export function ResumesSection({
     itemsPerPage: 7
   });
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredResumes = searchQuery
+    ? optimisticCopiedResumes.filter((r) =>
+        r.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : optimisticCopiedResumes;
+
   // Handle optimistic deletion
   const handleDeleteResume = async (resumeId: string, resumeName: string) => {
     // Add to deleting set for visual feedback
@@ -174,13 +183,18 @@ export function ResumesSection({
 
   const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
   const endIndex = startIndex + pagination.itemsPerPage;
-  const paginatedResumes = optimisticCopiedResumes.slice(startIndex, endIndex);
+  const paginatedResumes = filteredResumes.slice(startIndex, endIndex);
 
   function handlePageChange(page: number) {
     setPagination(prev => ({
       ...prev,
       currentPage: page
     }));
+  }
+
+  function handleSearchChange(query: string) {
+    setSearchQuery(query);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   }
 
   // Create Resume Card Component
@@ -504,7 +518,31 @@ export function ResumesSection({
             {type === 'base' ? 'Base' : 'Tailored'} Resumes
           </h2>
           <div className="flex items-center gap-2 mb-4">
-            <ResumeSortControls 
+            <div className="relative flex items-center">
+              <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search resumes..."
+                className={cn(
+                  "pl-9 pr-8 h-9 w-48 bg-white/60",
+                  type === 'base'
+                    ? "border-purple-200/60 focus-visible:ring-purple-400/40"
+                    : "border-pink-200/60 focus-visible:ring-pink-400/40"
+                )}
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 h-6 w-6 text-muted-foreground hover:text-foreground"
+                  onClick={() => handleSearchChange('')}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+            <ResumeSortControls
               sortParam={sortParam}
               directionParam={directionParam}
               currentSort={currentSort}
@@ -514,7 +552,7 @@ export function ResumesSection({
         </div>
 
         {/* Desktop Pagination (hidden on mobile) */}
-        {optimisticCopiedResumes.length > pagination.itemsPerPage && (
+        {filteredResumes.length > pagination.itemsPerPage && (
           <div className="hidden md:flex w-full items-start justify-start -mt-4">
             <Pagination className="flex justify-end">
               <PaginationContent className="gap-1">
@@ -530,9 +568,9 @@ export function ResumesSection({
                   </Button>
                 </PaginationItem>
                 
-                {Array.from({ length: Math.ceil(optimisticCopiedResumes.length / pagination.itemsPerPage) }).map((_, index) => {
+                {Array.from({ length: Math.ceil(filteredResumes.length / pagination.itemsPerPage) }).map((_, index) => {
                   const pageNumber = index + 1;
-                  const totalPages = Math.ceil(optimisticCopiedResumes.length / pagination.itemsPerPage);
+                  const totalPages = Math.ceil(filteredResumes.length / pagination.itemsPerPage);
                   
                   if (
                     pageNumber === 1 || 
@@ -576,7 +614,7 @@ export function ResumesSection({
                     variant="ghost"
                     size="sm"
                     onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage === Math.ceil(optimisticCopiedResumes.length / pagination.itemsPerPage)}
+                    disabled={pagination.currentPage === Math.ceil(filteredResumes.length / pagination.itemsPerPage)}
                     className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                   >
                     <ChevronRight className="h-4 w-4" />
