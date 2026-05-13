@@ -72,6 +72,13 @@ export interface CustomPrompts {
 
 
 
+export interface ApplicationQuestion {
+  id: string;
+  question: string;
+  answer: string;
+  createdAt: string;
+}
+
 export interface Job {
   id: string;
   user_id: string;
@@ -87,6 +94,7 @@ export interface Job {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  application_questions: ApplicationQuestion[];
 }
 
 export interface SectionConfig {

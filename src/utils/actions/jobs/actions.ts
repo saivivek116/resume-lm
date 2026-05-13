@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from 'next/cache';
 import { simplifiedJobSchema } from "@/lib/zod-schemas";
-import type { Job } from "@/lib/types";
+import type { Job, ApplicationQuestion } from "@/lib/types";
 import { z } from "zod";
 import { JobListingParams } from "./schema";
 
@@ -149,6 +149,29 @@ export async function deleteTailoredJob(jobId: string): Promise<void> {
   }
 
   revalidatePath('/', 'layout');
+}
+
+export async function updateJobQuestions(
+  jobId: string,
+  questions: ApplicationQuestion[]
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { error } = await supabase
+    .from('jobs')
+    .update({ application_questions: questions })
+    .eq('id', jobId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('[updateJobQuestions] Error:', error);
+    throw new Error('Failed to save questions');
+  }
 }
 
 export async function createEmptyJob(): Promise<Job> {

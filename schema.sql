@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
   work_location text NULL DEFAULT 'in_person'::text,
   employment_type text NULL DEFAULT 'full_time'::text,
   is_active boolean NULL DEFAULT true,
+  application_questions jsonb NOT NULL DEFAULT '[]'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   CONSTRAINT jobs_pkey PRIMARY KEY (id),
