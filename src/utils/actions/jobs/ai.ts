@@ -178,6 +178,47 @@ Remove any internal notes/annotations; final output should be clean, professiona
   throw lastError ?? new Error('Failed to tailor resume');
 }
 
+export async function checkJobEligibility(jobDescription: string): Promise<{ flagged: boolean; flaggedSentences: string[] }> {
+  const modelCandidates = getModelCandidates();
+
+  for (const candidate of modelCandidates) {
+    try {
+      console.log(`[ELIGIBILITY][TRY] ${candidate.model}`);
+      const aiClient = await initializeAIClient(candidate);
+      const { object } = await generateObject({
+        model: aiClient as LanguageModelV1,
+        temperature: 0,
+        maxRetries: 0,
+        schema: z.object({
+          flagged: z.boolean(),
+          flaggedSentences: z.array(z.string().max(500)),
+        }),
+        system: `You are a work authorization eligibility checker for job descriptions. Your task is to identify any requirements that would disqualify an F1 visa holder (international student on a student visa) from legally working in the role.
+
+Flag the job if it contains ANY of the following:
+1. US citizenship requirements (e.g., "must be a US citizen", "US citizenship required", "citizenship is required")
+2. Security clearance requirements (e.g., Secret, Top Secret, TS/SCI, security clearance, DoD clearance)
+3. No visa sponsorship language (e.g., "no visa sponsorship", "must be authorized to work without sponsorship", "we do not sponsor work visas", "must have permanent work authorization")
+
+Return:
+- flagged: true if any of the above are found, false otherwise
+- flaggedSentences: the exact sentences (quoted verbatim from the job description) that contain the flagging language. Empty array if not flagged.
+
+Be precise — only flag clear, explicit requirements. Do not flag general "must be authorized to work in the US" language unless it also says "without sponsorship".`,
+        prompt: jobDescription,
+      });
+
+      console.log(`[ELIGIBILITY][SUCCESS ✅] ${candidate.model} | flagged: ${object.flagged}`);
+      return object;
+    } catch (error) {
+      console.error(`[ELIGIBILITY][FAILED ❌] ${candidate.model} | Reason: ${(error as Error)?.message ?? 'Unknown error'}`);
+    }
+  }
+
+  // Fail open — don't block the user if the check itself fails
+  return { flagged: false, flaggedSentences: [] };
+}
+
 export async function formatJobListing(jobListing: string, config?: AIConfig) {
   const overallStart = Date.now();
   const modelCandidates = getModelCandidates(config);

@@ -10,8 +10,8 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, Plus, Brain, Copy } from "lucide-react";
 import { createTailoredResume, getResumeById } from "@/utils/actions/resumes/actions";
 import { CreateBaseResumeDialog } from "./create-base-resume-dialog";
-import { tailorResumeToJob } from "@/utils/actions/jobs/ai";
-import { formatJobListing } from "@/utils/actions/jobs/ai";
+import { tailorResumeToJob, formatJobListing, checkJobEligibility } from "@/utils/actions/jobs/ai";
+import { EligibilityWarningDialog } from "./eligibility-warning-dialog";
 import { createJob } from "@/utils/actions/jobs/actions";
 import { MiniResumePreview } from "../../shared/mini-resume-preview";
 import { LoadingOverlay, type CreationStep } from "../loading-overlay";
@@ -38,6 +38,8 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
   const [importOption, setImportOption] = useState<'import-profile' | 'ai'>('ai');
   const [isBaseResumeInvalid, setIsBaseResumeInvalid] = useState(false);
   const [isJobDescriptionInvalid, setIsJobDescriptionInvalid] = useState(false);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [eligibilityWarning, setEligibilityWarning] = useState<{ open: boolean; flaggedSentences: string[] }>({ open: false, flaggedSentences: [] });
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
   const router = useRouter();
@@ -84,28 +86,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
     setDialogStep(1);
   };
 
-  const handleCreate = async () => {
-    // Validate required fields
-    if (!selectedBaseResume) {
-      setIsBaseResumeInvalid(true);
-      toast({
-        title: "Error",
-        description: "Please select a base resume",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!jobDescription.trim() && importOption === 'ai') {
-      setIsJobDescriptionInvalid(true);
-      toast({
-        title: "Error",
-        description: "Please enter a job description",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const proceedWithCreate = async () => {
     try {
       setIsCreating(true);
       setCurrentStep('analyzing');
@@ -307,7 +288,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
     }
   };
 
-  // Reset form when dialog opens
+  // Reset form when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (newOpen) {
@@ -315,7 +296,47 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
       setDialogStep(1);
       setImportOption('ai');
       setSelectedBaseResume(baseResumes?.[0]?.id || '');
+    } else {
+      setIsCheckingEligibility(false);
+      setEligibilityWarning({ open: false, flaggedSentences: [] });
     }
+  };
+
+  const handleCreate = async () => {
+    if (!selectedBaseResume) {
+      setIsBaseResumeInvalid(true);
+      toast({
+        title: "Error",
+        description: "Please select a base resume",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!jobDescription.trim() && importOption === 'ai') {
+      setIsJobDescriptionInvalid(true);
+      toast({
+        title: "Error",
+        description: "Please enter a job description",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (importOption === 'ai' && jobDescription.trim()) {
+      setIsCheckingEligibility(true);
+      try {
+        const { flagged, flaggedSentences } = await checkJobEligibility(jobDescription);
+        if (flagged) {
+          setEligibilityWarning({ open: true, flaggedSentences });
+          return;
+        }
+      } finally {
+        setIsCheckingEligibility(false);
+      }
+    }
+
+    await proceedWithCreate();
   };
 
   if (!baseResumes || baseResumes.length === 0) {
@@ -583,13 +604,18 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
                   </Button>
                 )}
                 {dialogStep === 2 && (
-                  <Button 
-                    onClick={handleCreate} 
-                    disabled={isCreating}
+                  <Button
+                    onClick={handleCreate}
+                    disabled={isCreating || isCheckingEligibility}
                     size="sm"
                     className="bg-pink-600 hover:bg-pink-700 text-white"
                   >
-                    {isCreating ? (
+                    {isCheckingEligibility ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Checking...
+                      </>
+                    ) : isCreating ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating...
@@ -604,6 +630,16 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
           </div>
         </DialogContent>
       </Dialog>
+
+      <EligibilityWarningDialog
+        open={eligibilityWarning.open}
+        flaggedSentences={eligibilityWarning.flaggedSentences}
+        onGoBack={() => setEligibilityWarning({ open: false, flaggedSentences: [] })}
+        onContinue={() => {
+          setEligibilityWarning({ open: false, flaggedSentences: [] });
+          proceedWithCreate();
+        }}
+      />
 
       {/* Error Dialog */}
       <ApiErrorDialog
