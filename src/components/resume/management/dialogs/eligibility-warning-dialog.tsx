@@ -26,7 +26,10 @@ export function EligibilityWarningDialog({
 }: EligibilityWarningDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onGoBack(); }}>
-      <AlertDialogContent className="border-red-200 max-w-lg">
+      <AlertDialogContent
+        className="border-red-200 max-w-lg"
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
