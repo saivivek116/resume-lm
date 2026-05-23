@@ -98,12 +98,13 @@ export async function getJobListings({
   // Calculate offset
   const offset = (page - 1) * pageSize;
 
-  // Start building the query
+  // Start building the query — job board shows TheirStack jobs only
   let query = supabase
     .from('jobs')
     .select('*', { count: 'exact' })
     .eq('user_id', user.id)
     .eq('is_active', true)
+    .eq('source', 'theirstack')
     .order('created_at', { ascending: false });
 
   // Apply filters if they exist
@@ -116,6 +117,9 @@ export async function getJobListings({
     }
     if (filters.keywords && filters.keywords.length > 0) {
       query = query.contains('keywords', filters.keywords);
+    }
+    if (filters.discoveredAfter) {
+      query = query.gte('created_at', filters.discoveredAfter);
     }
   }
 
@@ -209,4 +213,19 @@ export async function createEmptyJob(): Promise<Job> {
 
   revalidatePath('/', 'layout');
   return data;
-} 
+}
+
+export async function getAppliedJobIds(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return [];
+
+  const { data } = await supabase
+    .from('resumes')
+    .select('job_id')
+    .eq('user_id', user.id)
+    .eq('is_base_resume', false)
+    .not('job_id', 'is', null);
+
+  return (data ?? []).map(r => r.job_id as string);
+}
