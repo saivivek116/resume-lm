@@ -39,7 +39,7 @@ interface PaginationState {
   itemsPerPage: number;
 }
 
-export function ResumesSection({ 
+export function ResumesSection({
   type,
   resumes,
   profile,

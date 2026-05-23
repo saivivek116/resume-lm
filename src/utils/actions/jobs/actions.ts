@@ -215,6 +215,19 @@ export async function createEmptyJob(): Promise<Job> {
   return data;
 }
 
+export async function getJobById(jobId: string): Promise<Job | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', jobId)
+    .eq('user_id', user.id)
+    .single();
+  return data;
+}
+
 export async function getAppliedJobIds(): Promise<string[]> {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -228,4 +241,19 @@ export async function getAppliedJobIds(): Promise<string[]> {
     .not('job_id', 'is', null);
 
   return (data ?? []).map(r => r.job_id as string);
+}
+
+export async function getJobResumeMap(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return {};
+
+  const { data } = await supabase
+    .from('resumes')
+    .select('id, job_id')
+    .eq('user_id', user.id)
+    .eq('is_base_resume', false)
+    .not('job_id', 'is', null);
+
+  return Object.fromEntries((data ?? []).map(r => [r.job_id as string, r.id as string]));
 }

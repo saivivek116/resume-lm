@@ -43,7 +43,6 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
   const router = useRouter();
-  
 
   function redactSecrets(text: string) {
     return text
@@ -90,7 +89,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
     try {
       setIsCreating(true);
       setCurrentStep('analyzing');
-      
+
       // Reset validation states
       setIsBaseResumeInvalid(false);
       setIsJobDescriptionInvalid(false);
@@ -496,7 +495,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
                       <p className="text-xs text-gray-600">Paste the job posting details</p>
                     </div>
                   </div>
-                  
+
                   <div className="ml-10">
                     <JobDescriptionInput
                       value={jobDescription}
