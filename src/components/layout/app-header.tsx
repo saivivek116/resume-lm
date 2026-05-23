@@ -5,7 +5,7 @@ import { SettingsButton } from "@/components/settings/settings-button";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Menu, User } from "lucide-react";
+import { Menu, User, Briefcase } from "lucide-react";
 import { PageTitle } from "./page-title";
 import { ProUpgradeButton } from "@/components/settings/pro-upgrade-button";
 import { Button } from "@/components/ui/button";
@@ -111,6 +111,31 @@ export function AppHeader({
 
                 <div className="flex items-center px-2 lg:px-3 py-1">
                   <Link
+                    href="/home"
+                    onClick={handleProfileClick}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 lg:px-3 py-1",
+                      "text-sm font-medium text-purple-600 hover:text-purple-800",
+                      "transition-colors duration-200"
+                    )}
+                  >
+                    <span className="hidden lg:inline">Home</span>
+                  </Link>
+                  <div className="mx-1 lg:mx-2 h-4 w-px bg-purple-200" />
+                  <Link
+                    href="/jobs"
+                    onClick={handleProfileClick}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 lg:px-3 py-1",
+                      "text-sm font-medium text-purple-600 hover:text-purple-800",
+                      "transition-colors duration-200"
+                    )}
+                  >
+                    <Briefcase className="h-4 w-4" />
+                    <span className="hidden lg:inline">Jobs</span>
+                  </Link>
+                  <div className="mx-1 lg:mx-2 h-4 w-px bg-purple-200" />
+                  <Link
                     href="/profile"
                     onClick={handleProfileClick}
                     className={cn(
@@ -160,6 +185,29 @@ export function AppHeader({
                       />
                     </div>
 
+                    <Link
+                      href="/home"
+                      onClick={handleProfileClick}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-md",
+                        "text-sm font-medium text-purple-600 hover:text-purple-800",
+                        "hover:bg-purple-50 transition-colors duration-200"
+                      )}
+                    >
+                      Home
+                    </Link>
+                    <Link
+                      href="/jobs"
+                      onClick={handleProfileClick}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-md",
+                        "text-sm font-medium text-purple-600 hover:text-purple-800",
+                        "hover:bg-purple-50 transition-colors duration-200"
+                      )}
+                    >
+                      <Briefcase className="h-4 w-4" />
+                      Jobs
+                    </Link>
                     <Link
                       href="/profile"
                       onClick={handleProfileClick}
