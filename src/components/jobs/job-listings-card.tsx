@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,12 +45,6 @@ function getDiscoveredAfter(range: DateRange): string | undefined {
   return start.toISOString();
 }
 
-function dateRangeLabel(range: DateRange): string {
-  if (range === 'today') return 'today';
-  if (range === 'week') return 'past 7 days';
-  if (range === 'month') return 'past 30 days';
-  return 'all time';
-}
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -152,10 +147,13 @@ function JobCard({ job, isApplied, index }: JobCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             {logo ? (
-              <img
+              <Image
                 src={logo}
                 alt={job.company_name ?? ''}
-                className="w-9 h-9 rounded-lg object-contain border border-white/60 shadow-sm shrink-0 bg-white"
+                width={36}
+                height={36}
+                className="rounded-lg object-contain border border-white/60 shadow-sm shrink-0 bg-white"
+                unoptimized
               />
             ) : (
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center shrink-0">
@@ -328,7 +326,7 @@ export function JobListingsCard() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, workLocation, employmentType, sourceFilter]);
+  }, [currentPage, workLocation, employmentType, sourceFilter, dateRange]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
