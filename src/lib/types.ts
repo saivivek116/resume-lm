@@ -79,6 +79,26 @@ export interface ApplicationQuestion {
   createdAt: string;
 }
 
+export interface TheirStackMetadata {
+  seniority: string | null;
+  company_domain: string | null;
+  company_logo: string | null;
+  company_industry: string | null;
+  company_linkedin_url: string | null;
+  technology_slugs: string[];
+  date_posted: string | null;
+  discovered_at: string | null;
+  closed_at: string | null;
+  min_annual_salary_usd: number | null;
+  max_annual_salary_usd: number | null;
+  avg_annual_salary_usd: number | null;
+  country_code: string | null;
+  easy_apply: boolean | null;
+  reposted: boolean;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface Job {
   id: string;
   user_id: string;
@@ -95,6 +115,9 @@ export interface Job {
   updated_at: string;
   is_active: boolean;
   application_questions: ApplicationQuestion[];
+  source?: 'manual' | 'theirstack';
+  theirstack_id?: number | null;
+  theirstack_metadata?: TheirStackMetadata | null;
 }
 
 export interface SectionConfig {

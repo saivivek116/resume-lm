@@ -1,76 +1,311 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Briefcase, Building2, MapPin, Clock, DollarSign, Trash2} from "lucide-react";
-import { getJobListings, deleteJob } from "@/utils/actions/jobs/actions";
-import { createClient } from "@/utils/supabase/client";
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-
+} from '@/components/ui/select';
+import {
+  Briefcase,
+  Building2,
+  MapPin,
+  Clock,
+  DollarSign,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Zap,
+  CalendarDays,
+} from 'lucide-react';
+import { getJobListings, getAppliedJobIds } from '@/utils/actions/jobs/actions';
+import type { Job } from '@/lib/types';
 
 type WorkLocationType = 'remote' | 'in_person' | 'hybrid';
 type EmploymentType = 'full_time' | 'part_time' | 'co_op' | 'internship';
+type DateRange = 'today' | 'week' | 'month' | 'all';
+type SourceFilter = 'theirstack' | 'manual';
 
-interface Job {
-  id: string;
-  company_name: string;
-  position_title: string;
-  location: string | null;
-  work_location: WorkLocationType | null;
-  employment_type: EmploymentType | null;
-  salary_range: string | null;
-  created_at: string;
-  keywords: string[] | null;
+const PAGE_SIZE = 9;
+
+function getDiscoveredAfter(range: DateRange): string | undefined {
+  if (range === 'all') return undefined;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  if (range === 'week') start.setDate(start.getDate() - 7);
+  if (range === 'month') start.setDate(start.getDate() - 30);
+  return start.toISOString();
+}
+
+function dateRangeLabel(range: DateRange): string {
+  if (range === 'today') return 'today';
+  if (range === 'week') return 'past 7 days';
+  if (range === 'month') return 'past 30 days';
+  return 'all time';
+}
+
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = Date.now();
+  const diffDays = Math.round((date.getTime() - now) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'today';
+  if (diffDays === -1) return 'yesterday';
+  if (diffDays > -7) return `${Math.abs(diffDays)} days ago`;
+  if (diffDays > -30) return `${Math.floor(Math.abs(diffDays) / 7)} weeks ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatWorkLocation(val: string | null): string {
+  if (!val) return 'Not specified';
+  return val.replace('_', ' ');
+}
+
+function formatSeniority(val: string | null): string {
+  if (!val) return '';
+  return val.replace(/_/g, ' ');
+}
+
+function JobCardSkeleton() {
+  return (
+    <Card className="p-5 space-y-4 animate-pulse bg-white/40 border-white/20 rounded-2xl">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg bg-gray-200/60 shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-gray-200/60 rounded-full w-3/4" />
+          <div className="h-3 bg-gray-200/60 rounded-full w-1/2" />
+        </div>
+      </div>
+      <div className="h-5 bg-gray-200/60 rounded-full w-5/6" />
+      <div className="space-y-2">
+        <div className="h-3 bg-gray-200/60 rounded-full w-2/3" />
+        <div className="h-3 bg-gray-200/60 rounded-full w-1/2" />
+      </div>
+      <div className="flex gap-2">
+        <div className="h-5 w-16 bg-gray-200/60 rounded-full" />
+        <div className="h-5 w-20 bg-gray-200/60 rounded-full" />
+      </div>
+    </Card>
+  );
+}
+
+function EmptyState({ dateRange }: { dateRange: DateRange }) {
+  const isToday = dateRange === 'today';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="col-span-full flex flex-col items-center justify-center py-24 text-center gap-4"
+    >
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center shadow-inner">
+        <Briefcase className="w-7 h-7 text-teal-600" />
+      </div>
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold text-gray-700">
+          {isToday ? 'No new jobs today' : 'No jobs found'}
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          {isToday
+            ? 'Check back later — or switch to This Week to see recent jobs.'
+            : 'Try adjusting the date range or filters.'}
+        </p>
+      </div>
+      <Button variant="outline" asChild className="mt-2 border-teal-200 text-teal-700 hover:bg-teal-50">
+        <Link href="/settings">Configure Webhook</Link>
+      </Button>
+    </motion.div>
+  );
+}
+
+interface JobCardProps {
+  job: Job;
+  isApplied: boolean;
+  index: number;
+}
+
+function JobCard({ job, isApplied, index }: JobCardProps) {
+  const meta = job.theirstack_metadata;
+  const logo = meta?.company_logo;
+  const seniority = formatSeniority(meta?.seniority ?? null);
+  const techSlugs = meta?.technology_slugs?.slice(0, 4) ?? [];
+  const extraTech = (meta?.technology_slugs?.length ?? 0) - 4;
+  const displayDate = meta?.date_posted ?? job.created_at;
+  const keywords = job.keywords ?? [];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.3 }}
+    >
+      <Card className="group relative flex flex-col h-full p-5 gap-4 hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-white/85 to-white/65 hover:from-white/95 hover:to-white/75 border-white/40 hover:border-white/70 rounded-2xl overflow-hidden hover:-translate-y-1">
+        {/* Hover glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-purple-500/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+        {/* Header row: logo + company + badges */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {logo ? (
+              <img
+                src={logo}
+                alt={job.company_name ?? ''}
+                className="w-9 h-9 rounded-lg object-contain border border-white/60 shadow-sm shrink-0 bg-white"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center shrink-0">
+                <Building2 className="w-4 h-4 text-teal-600" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-700 group-hover:text-purple-700 transition-colors line-clamp-1">
+                {job.company_name}
+              </p>
+              {seniority && (
+                <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full capitalize leading-none">
+                  {seniority}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Source + Applied badges */}
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+            {job.source === 'theirstack' && (
+              <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 text-[10px] px-1.5 py-0.5 gap-0.5 h-auto">
+                <Zap className="w-2.5 h-2.5" />
+                TheirStack
+              </Badge>
+            )}
+            {isApplied && (
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-1.5 py-0.5 gap-0.5 h-auto">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Applied
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Position title */}
+        <h3 className="font-semibold text-base text-gray-800 group-hover:text-teal-700 transition-colors line-clamp-2 leading-snug -mt-1">
+          {job.position_title}
+        </h3>
+
+        {/* Metadata */}
+        <div className="space-y-1.5 text-xs text-gray-500">
+          {job.location && (
+            <div className="flex items-center gap-1.5 group-hover:text-teal-600 transition-colors">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span className="line-clamp-1">{job.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 group-hover:text-purple-600 transition-colors">
+              <Briefcase className="w-3.5 h-3.5 shrink-0" />
+              <span className="capitalize">{formatWorkLocation(job.work_location)}</span>
+            </span>
+            {job.salary_range && (
+              <span className="flex items-center gap-1.5 group-hover:text-rose-600 transition-colors">
+                <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                <span className="line-clamp-1">{job.salary_range}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-gray-400">
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>{formatRelativeDate(displayDate)}</span>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200/60 to-transparent" />
+
+        {/* Tech stack */}
+        {techSlugs.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {techSlugs.map((slug) => (
+              <Badge
+                key={slug}
+                className="bg-indigo-50 text-indigo-700 border-indigo-100 text-[10px] px-1.5 py-0.5 h-auto font-normal"
+              >
+                {slug}
+              </Badge>
+            ))}
+            {extraTech > 0 && (
+              <Badge className="bg-indigo-50 text-indigo-400 border-indigo-100 text-[10px] px-1.5 py-0.5 h-auto font-normal">
+                +{extraTech}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Keywords */}
+        {keywords.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {keywords.slice(0, 3).map((kw) => (
+              <Badge
+                key={kw}
+                className="bg-teal-50/60 text-teal-700 border-teal-100/40 text-[10px] px-1.5 py-0.5 h-auto font-normal"
+              >
+                {kw}
+              </Badge>
+            ))}
+            {keywords.length > 3 && (
+              <Badge className="bg-purple-50/60 text-purple-500 border-purple-100/40 text-[10px] px-1.5 py-0.5 h-auto font-normal">
+                +{keywords.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-auto pt-1">
+          {isApplied ? (
+            <Button
+              size="sm"
+              variant="outline"
+              asChild
+              className="w-full text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-xs h-8"
+            >
+              <Link href="/home">View Resume →</Link>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              asChild
+              className="w-full text-teal-700 border-teal-200 hover:bg-teal-50 text-xs h-8"
+            >
+              <Link href="/home">Tailor Resume →</Link>
+            </Button>
+          )}
+        </div>
+      </Card>
+    </motion.div>
+  );
 }
 
 export function JobListingsCard() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+
   const [workLocation, setWorkLocation] = useState<WorkLocationType | undefined>();
   const [employmentType, setEmploymentType] = useState<EmploymentType | undefined>();
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange>('all');
 
-  // Fetch admin status
+  // Fetch applied job IDs once on mount
   useEffect(() => {
-    async function checkAdminStatus() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (!profileError) {
-          setIsAdmin(profile?.is_admin === true);
-          return;
-        }
-
-        // Backward compatibility for deployments still using public.admins
-        const { data: adminData } = await supabase
-          .from('admins')
-          .select('is_admin')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        setIsAdmin(adminData?.is_admin === true);
-      }
-    }
-    
-    checkAdminStatus();
+    getAppliedJobIds().then((ids) => setAppliedIds(new Set(ids)));
   }, []);
 
   const fetchJobs = useCallback(async () => {
@@ -78,238 +313,182 @@ export function JobListingsCard() {
       setIsLoading(true);
       const result = await getJobListings({
         page: currentPage,
-        pageSize: 6,
+        pageSize: PAGE_SIZE,
         filters: {
           workLocation,
-          employmentType
-        }
+          employmentType,
+          discoveredAfter: getDiscoveredAfter(dateRange),
+        },
       });
-      setJobs(result.jobs);
+      setJobs(result.jobs ?? []);
       setTotalPages(result.totalPages);
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
+      setTotalCount(result.totalCount);
+    } catch (err) {
+      console.error('Error fetching jobs:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, workLocation, employmentType]);
+  }, [currentPage, workLocation, employmentType, sourceFilter]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [workLocation, employmentType, sourceFilter, dateRange]);
 
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
-
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      'day'
-    );
-  };
-
-  const formatWorkLocation = (workLocation: Job['work_location']) => {
-    if (!workLocation) return 'Not specified';
-    return workLocation.replace('_', ' ');
-  };
-
-  const handleDeleteJob = async (jobId: string) => {
-    try {
-      await deleteJob(jobId);
-      // Refetch jobs after deletion
-      fetchJobs();
-    } catch (error) {
-      console.error('Error deleting job:', error);
-    }
-  };
-
   return (
-    <div className="relative">
-      {/* Decorative background elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 via-teal-50/20 to-rose-50/30 rounded-3xl" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff20_1px,transparent_1px),linear-gradient(to_bottom,#ffffff20_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
-      
-      <Card className="relative p-8 bg-white/60 backdrop-blur-2xl border-white/40 shadow-2xl rounded-3xl overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-teal-400/10 via-purple-400/10 to-pink-400/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-rose-400/10 via-violet-400/10 to-cyan-400/10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2" />
-        
-        <div className="relative flex flex-col space-y-8">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6">
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-4xl font-bold bg-gradient-to-r from-teal-600 via-purple-600 to-rose-600 bg-clip-text text-transparent"
-            >
-              Job Listings
-            </motion.h2>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4"
-            >
-              <div className="relative group">
-                <Select
-                  value={workLocation}
-                  onValueChange={(value: WorkLocationType) => setWorkLocation(value)}
-                >
-                  <SelectTrigger className="w-full sm:w-[180px] bg-white/80 backdrop-blur-xl border-white/40 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-teal-200">
-                    <MapPin className="w-4 h-4 mr-2 text-teal-500" />
-                    <SelectValue placeholder="Work Location" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
-                    <SelectItem value="remote">🌍 Remote</SelectItem>
-                    <SelectItem value="in_person">🏢 In Person</SelectItem>
-                    <SelectItem value="hybrid">🔄 Hybrid</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-teal-500/20 to-purple-500/20 blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-
-              <div className="relative group">
-                <Select
-                  value={employmentType}
-                  onValueChange={(value: EmploymentType) => setEmploymentType(value)}
-                >
-                  <SelectTrigger className="w-full sm:w-[180px] bg-white/80 backdrop-blur-xl border-white/40 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-purple-200">
-                    <Briefcase className="w-4 h-4 mr-2 text-purple-500" />
-                    <SelectValue placeholder="Job Type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
-                    <SelectItem value="full_time">⭐ Full Time</SelectItem>
-                    <SelectItem value="part_time">⌛ Part Time</SelectItem>
-                    <SelectItem value="co_op">🤝 Co-op</SelectItem>
-                    <SelectItem value="internship">🎓 Internship</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 to-rose-500/20 blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            </motion.div>
-          </div>
-
-          <motion.div 
+    <div className="relative space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end gap-4 justify-between">
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-purple-600 to-rose-600 bg-clip-text text-transparent"
+          >
+            Job Board
+          </motion.h1>
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            transition={{ delay: 0.1 }}
+            className="text-sm text-muted-foreground mt-0.5"
           >
-            {isLoading ? (
-              Array(6).fill(0).map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <Card className="p-6 space-y-4 animate-pulse bg-white/40 border-white/20 rounded-2xl">
-                    <div className="h-6 bg-gradient-to-r from-gray-200/50 to-gray-100/50 rounded-full w-3/4" />
-                    <div className="h-4 bg-gradient-to-r from-gray-200/50 to-gray-100/50 rounded-full w-1/2" />
-                    <div className="h-4 bg-gradient-to-r from-gray-200/50 to-gray-100/50 rounded-full w-2/3" />
-                  </Card>
-                </motion.div>
-              ))
-            ) : jobs.map((job, idx) => (
-              <motion.div
-                key={job.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-              >
-                <Card className="group relative p-6 space-y-5 hover:shadow-2xl transition-all duration-500 ease-out bg-gradient-to-br from-white/80 to-white/60 hover:from-white/90 hover:to-white/70 border-white/40 hover:border-white/60 rounded-2xl overflow-hidden hover:-translate-y-1">
-                  <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-purple-500/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2.5">
-                      <h3 className="font-semibold text-lg line-clamp-1 text-gray-800 group-hover:text-teal-700 transition-colors duration-300">
-                        {job.position_title}
-                      </h3>
-                      <div className="flex items-center text-gray-600">
-                        <Building2 className="w-4 h-4 mr-2 text-purple-500" />
-                        <span className="line-clamp-1 group-hover:text-purple-700 transition-colors duration-300">
-                          {job.company_name}
-                        </span>
-                      </div>
-                    </div>
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-gray-400 hover:text-red-500 hover:bg-red-50/50 transition-all duration-300"
-                        onClick={() => handleDeleteJob(job.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="space-y-3 text-sm text-gray-600">
-                    <div className="flex items-center gap-2 group-hover:text-teal-600 transition-colors duration-300">
-                      <MapPin className="w-4 h-4" />
-                      <span>{job.location || 'Location not specified'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 group-hover:text-purple-600 transition-colors duration-300">
-                      <Briefcase className="w-4 h-4" />
-                      <span className="capitalize">{formatWorkLocation(job.work_location)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 group-hover:text-rose-600 transition-colors duration-300">
-                      <DollarSign className="w-4 h-4" />
-                      <span>{job.salary_range}</span>
-                    </div>
-                    <div className="flex items-center gap-2 group-hover:text-teal-600 transition-colors duration-300">
-                      <Clock className="w-4 h-4" />
-                      <span>{formatDate(job.created_at)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {job.keywords?.slice(0, 3).map((keyword, index) => (
-                      <Badge 
-                        key={index} 
-                        variant="secondary" 
-                        className="text-xs bg-gradient-to-r from-teal-50/50 to-purple-50/50 text-teal-700 hover:from-teal-100/50 hover:to-purple-100/50 transition-all duration-300 border border-teal-100/20"
-                      >
-                        {keyword}
-                      </Badge>
-                    ))}
-                    {job.keywords && job.keywords.length > 3 && (
-                      <Badge 
-                        variant="secondary" 
-                        className="text-xs bg-gradient-to-r from-purple-50/50 to-rose-50/50 text-purple-700 hover:from-purple-100/50 hover:to-rose-100/50 transition-all duration-300 border border-purple-100/20"
-                      >
-                        +{job.keywords.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="flex justify-center gap-4 mt-6"
-          >
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || isLoading}
-              className="bg-white/70 border-white/40 hover:bg-white/80 hover:border-teal-200 transition-all duration-300 disabled:opacity-50 px-6"
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || isLoading}
-              className="bg-white/70 border-white/40 hover:bg-white/80 hover:border-purple-200 transition-all duration-300 disabled:opacity-50 px-6"
-            >
-              Next
-            </Button>
-          </motion.div>
+            {isLoading ? 'Loading…' : `${totalCount} job${totalCount !== 1 ? 's' : ''} found`}
+          </motion.p>
         </div>
-      </Card>
+
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="flex flex-wrap gap-2"
+        >
+          <Select
+            value={dateRange}
+            onValueChange={(v) => setDateRange(v as DateRange)}
+          >
+            <SelectTrigger className="w-[140px] bg-white/80 backdrop-blur-xl border-white/40 shadow-sm hover:border-rose-200 text-xs h-9">
+              <CalendarDays className="w-3.5 h-3.5 mr-1.5 text-rose-500" />
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
+              <SelectItem value="today">📅 Today</SelectItem>
+              <SelectItem value="week">🗓️ Past 7 days</SelectItem>
+              <SelectItem value="month">📆 Past 30 days</SelectItem>
+              <SelectItem value="all">🔍 All time</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={sourceFilter ?? 'all'}
+            onValueChange={(v) => setSourceFilter(v === 'all' ? undefined : v as SourceFilter)}
+          >
+            <SelectTrigger className="w-[140px] bg-white/80 backdrop-blur-xl border-white/40 shadow-sm hover:border-indigo-200 text-xs h-9">
+              <Zap className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
+              <SelectValue placeholder="Source" />
+            </SelectTrigger>
+            <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
+              <SelectItem value="all">All Sources</SelectItem>
+              <SelectItem value="theirstack">⚡ TheirStack</SelectItem>
+              <SelectItem value="manual">✏️ Manual</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={workLocation ?? 'all'}
+            onValueChange={(v) => setWorkLocation(v === 'all' ? undefined : v as WorkLocationType)}
+          >
+            <SelectTrigger className="w-[140px] bg-white/80 backdrop-blur-xl border-white/40 shadow-sm hover:border-teal-200 text-xs h-9">
+              <MapPin className="w-3.5 h-3.5 mr-1.5 text-teal-500" />
+              <SelectValue placeholder="Location" />
+            </SelectTrigger>
+            <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
+              <SelectItem value="all">All Locations</SelectItem>
+              <SelectItem value="remote">🌍 Remote</SelectItem>
+              <SelectItem value="in_person">🏢 In Person</SelectItem>
+              <SelectItem value="hybrid">🔄 Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={employmentType ?? 'all'}
+            onValueChange={(v) => setEmploymentType(v === 'all' ? undefined : v as EmploymentType)}
+          >
+            <SelectTrigger className="w-[140px] bg-white/80 backdrop-blur-xl border-white/40 shadow-sm hover:border-purple-200 text-xs h-9">
+              <Briefcase className="w-3.5 h-3.5 mr-1.5 text-purple-500" />
+              <SelectValue placeholder="Job Type" />
+            </SelectTrigger>
+            <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="full_time">⭐ Full Time</SelectItem>
+              <SelectItem value="part_time">⌛ Part Time</SelectItem>
+              <SelectItem value="co_op">🤝 Co-op</SelectItem>
+              <SelectItem value="internship">🎓 Internship</SelectItem>
+            </SelectContent>
+          </Select>
+        </motion.div>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <JobCardSkeleton key={i} />
+            ))
+          ) : jobs.length === 0 ? (
+            <EmptyState key="empty" dateRange={dateRange} />
+          ) : (
+            jobs.map((job, idx) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                isApplied={appliedIds.has(job.id)}
+                index={idx}
+              />
+            ))
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex items-center justify-center gap-3"
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || isLoading}
+            className="bg-white/70 border-white/40 hover:bg-white/80 hover:border-teal-200 disabled:opacity-40 gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </Button>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages || isLoading}
+            className="bg-white/70 border-white/40 hover:bg-white/80 hover:border-purple-200 disabled:opacity-40 gap-1"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
-} 
+}
