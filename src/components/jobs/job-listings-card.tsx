@@ -26,19 +26,27 @@ import {
   Zap,
   CalendarDays,
 } from 'lucide-react';
-import { getJobListings, getAppliedJobIds } from '@/utils/actions/jobs/actions';
+import { getJobListings, getJobResumeMap } from '@/utils/actions/jobs/actions';
+import { TailorResumeDialog } from './tailor-resume-dialog';
 import type { Job } from '@/lib/types';
 
 type WorkLocationType = 'remote' | 'in_person' | 'hybrid';
 type EmploymentType = 'full_time' | 'part_time' | 'co_op' | 'internship';
-type DateRange = 'today' | 'week' | 'month' | 'all';
+type DateRange = 'today' | '24h' | '3days' | 'week' | 'month' | 'all';
 type SourceFilter = 'theirstack' | 'manual';
 
 const PAGE_SIZE = 9;
 
 function getDiscoveredAfter(range: DateRange): string | undefined {
   if (range === 'all') return undefined;
-  const start = new Date();
+  const now = new Date();
+  if (range === '24h') {
+    return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  }
+  if (range === '3days') {
+    return new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  }
+  const start = new Date(now);
   start.setHours(0, 0, 0, 0);
   if (range === 'week') start.setDate(start.getDate() - 7);
   if (range === 'month') start.setDate(start.getDate() - 30);
@@ -120,11 +128,11 @@ function EmptyState({ dateRange }: { dateRange: DateRange }) {
 
 interface JobCardProps {
   job: Job;
-  isApplied: boolean;
+  resumeId: string | undefined;
   index: number;
 }
 
-function JobCard({ job, isApplied, index }: JobCardProps) {
+function JobCard({ job, resumeId, index }: JobCardProps) {
   const meta = job.theirstack_metadata;
   const logo = meta?.company_logo;
   const seniority = formatSeniority(meta?.seniority ?? null);
@@ -180,7 +188,7 @@ function JobCard({ job, isApplied, index }: JobCardProps) {
                 TheirStack
               </Badge>
             )}
-            {isApplied && (
+            {resumeId && (
               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-1.5 py-0.5 gap-0.5 h-auto">
                 <CheckCircle2 className="w-2.5 h-2.5" />
                 Applied
@@ -263,24 +271,25 @@ function JobCard({ job, isApplied, index }: JobCardProps) {
 
         {/* CTA */}
         <div className="mt-auto pt-1">
-          {isApplied ? (
+          {resumeId ? (
             <Button
               size="sm"
               variant="outline"
               asChild
               className="w-full text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-xs h-8"
             >
-              <Link href="/home">View Resume →</Link>
+              <Link href={`/resumes/${resumeId}`}>View Resume →</Link>
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              asChild
-              className="w-full text-teal-700 border-teal-200 hover:bg-teal-50 text-xs h-8"
-            >
-              <Link href="/home">Tailor Resume →</Link>
-            </Button>
+            <TailorResumeDialog job={job}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-teal-700 border-teal-200 hover:bg-teal-50 text-xs h-8"
+              >
+                Tailor Resume →
+              </Button>
+            </TailorResumeDialog>
           )}
         </div>
       </Card>
@@ -290,7 +299,7 @@ function JobCard({ job, isApplied, index }: JobCardProps) {
 
 export function JobListingsCard() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [jobResumeMap, setJobResumeMap] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -301,9 +310,9 @@ export function JobListingsCard() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter | undefined>();
   const [dateRange, setDateRange] = useState<DateRange>('all');
 
-  // Fetch applied job IDs once on mount
+  // Fetch job->resume map once on mount
   useEffect(() => {
-    getAppliedJobIds().then((ids) => setAppliedIds(new Set(ids)));
+    getJobResumeMap().then(setJobResumeMap);
   }, []);
 
   const fetchJobs = useCallback(async () => {
@@ -326,7 +335,7 @@ export function JobListingsCard() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, workLocation, employmentType, sourceFilter, dateRange]);
+  }, [currentPage, workLocation, employmentType, dateRange]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -376,6 +385,8 @@ export function JobListingsCard() {
             </SelectTrigger>
             <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40">
               <SelectItem value="today">📅 Today</SelectItem>
+              <SelectItem value="24h">🕐 Last 24 hours</SelectItem>
+              <SelectItem value="3days">📅 Last 3 days</SelectItem>
               <SelectItem value="week">🗓️ Past 7 days</SelectItem>
               <SelectItem value="month">📆 Past 30 days</SelectItem>
               <SelectItem value="all">🔍 All time</SelectItem>
@@ -446,7 +457,7 @@ export function JobListingsCard() {
               <JobCard
                 key={job.id}
                 job={job}
-                isApplied={appliedIds.has(job.id)}
+                resumeId={jobResumeMap[job.id]}
                 index={idx}
               />
             ))
