@@ -25,8 +25,9 @@ import {
   ChevronRight,
   Zap,
   CalendarDays,
+  ExternalLink,
 } from 'lucide-react';
-import { getJobListings, getJobResumeMap } from '@/utils/actions/jobs/actions';
+import { getJobsPageData } from '@/utils/actions/jobs/actions';
 import { TailorResumeDialog } from './tailor-resume-dialog';
 import type { Job } from '@/lib/types';
 
@@ -270,27 +271,42 @@ function JobCard({ job, resumeId, index }: JobCardProps) {
         )}
 
         {/* CTA */}
-        <div className="mt-auto pt-1">
-          {resumeId ? (
+        <div className="mt-auto pt-1 flex gap-2">
+          {job.job_url && (
             <Button
               size="sm"
               variant="outline"
               asChild
-              className="w-full text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-xs h-8"
+              className="flex-1 text-indigo-700 border-indigo-200 hover:bg-indigo-50 text-xs h-8 gap-1"
             >
-              <Link href={`/resumes/${resumeId}`}>View Resume →</Link>
+              <a href={job.job_url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-3 h-3" />
+                Apply
+              </a>
             </Button>
-          ) : (
-            <TailorResumeDialog job={job}>
+          )}
+          <div className={job.job_url ? 'flex-1' : 'w-full'}>
+            {resumeId ? (
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full text-teal-700 border-teal-200 hover:bg-teal-50 text-xs h-8"
+                asChild
+                className="w-full text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-xs h-8"
               >
-                Tailor Resume →
+                <Link href={`/resumes/${resumeId}`}>View Resume →</Link>
               </Button>
-            </TailorResumeDialog>
-          )}
+            ) : (
+              <TailorResumeDialog job={job}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-teal-700 border-teal-200 hover:bg-teal-50 text-xs h-8"
+                >
+                  Tailor Resume →
+                </Button>
+              </TailorResumeDialog>
+            )}
+          </div>
         </div>
       </Card>
     </motion.div>
@@ -308,17 +324,12 @@ export function JobListingsCard() {
   const [workLocation, setWorkLocation] = useState<WorkLocationType | undefined>();
   const [employmentType, setEmploymentType] = useState<EmploymentType | undefined>();
   const [sourceFilter, setSourceFilter] = useState<SourceFilter | undefined>();
-  const [dateRange, setDateRange] = useState<DateRange>('all');
-
-  // Fetch job->resume map once on mount
-  useEffect(() => {
-    getJobResumeMap().then(setJobResumeMap);
-  }, []);
+  const [dateRange, setDateRange] = useState<DateRange>('24h');
 
   const fetchJobs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const result = await getJobListings({
+      const result = await getJobsPageData({
         page: currentPage,
         pageSize: PAGE_SIZE,
         filters: {
@@ -330,6 +341,7 @@ export function JobListingsCard() {
       setJobs(result.jobs ?? []);
       setTotalPages(result.totalPages);
       setTotalCount(result.totalCount);
+      setJobResumeMap(result.jobResumeMap);
     } catch (err) {
       console.error('Error fetching jobs:', err);
     } finally {

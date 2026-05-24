@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import {  MapPin, Clock, DollarSign, Briefcase, Trash2, Loader2, Plus, Sparkles, AlertCircle } from "lucide-react";
+import {  MapPin, Clock, DollarSign, Briefcase, Trash2, Loader2, Plus, Sparkles, AlertCircle, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { Job, Resume } from "@/lib/types";
@@ -425,6 +425,19 @@ export function TailoredJobCard({
                 </div>
               )}
               
+              {/* Apply link */}
+              {effectiveJob.job_url && (
+                <a
+                  href={effectiveJob.job_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Apply to this job
+                </a>
+              )}
+
               {/* Keywords */}
               <div className="flex flex-wrap gap-2 ">
                 {effectiveJob.keywords?.map((keyword, index) => (
