@@ -37,6 +37,7 @@ export interface Certification {
 }
 
 export type ResumeSectionId =
+  | 'professional_summary'
   | 'skills'
   | 'work_experience'
   | 'projects'
@@ -44,6 +45,7 @@ export type ResumeSectionId =
   | 'certifications';
 
 export const DEFAULT_SECTION_ORDER: ResumeSectionId[] = [
+  'professional_summary',
   'skills',
   'work_experience',
   'projects',
@@ -52,6 +54,7 @@ export const DEFAULT_SECTION_ORDER: ResumeSectionId[] = [
 ];
 
 export const SECTION_LABELS: Record<ResumeSectionId, string> = {
+  professional_summary: 'Professional Summary',
   skills: 'Skills',
   work_experience: 'Work Experience',
   projects: 'Projects',
@@ -141,6 +144,7 @@ export interface Resume {
   website?: string;
   linkedin_url?: string;
   github_url?: string;
+  professional_summary?: string | null;
   work_experience: WorkExperience[];
   education: Education[];
   skills: Skill[];
