@@ -1,4 +1,4 @@
-import { Resume, Job, CoverLetterDocumentSettings } from "@/lib/types";
+import { Resume, Job, Profile, CoverLetterDocumentSettings, CoverLetterData } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FileText, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
@@ -19,12 +19,14 @@ import { DEFAULT_COVER_LETTER_SETTINGS } from "@/components/cover-letter/cover-l
 interface CoverLetterPanelProps {
   resume: Resume;
   job: Job | null;
+  profile?: Profile;
   aiConfig?: AIConfig;
 }
 
 export function CoverLetterPanel({
   resume,
   job,
+  profile,
   aiConfig,
 }: CoverLetterPanelProps) {
   const { dispatch } = useResumeContext();
@@ -250,7 +252,18 @@ export function CoverLetterPanel({
             variant="outline"
             size="sm"
             className="w-full border-emerald-600/50 text-emerald-700 hover:bg-emerald-50"
-            onClick={() => updateField('has_cover_letter', true)}
+            onClick={() => {
+              if (!resume.cover_letter?.document_settings) {
+                const seeded: CoverLetterData = {
+                  content: resume.cover_letter?.content ?? '',
+                  lastUpdated: resume.cover_letter?.lastUpdated,
+                  document_settings:
+                    profile?.cover_letter_document_settings ?? DEFAULT_COVER_LETTER_SETTINGS,
+                };
+                dispatch({ type: 'UPDATE_FIELD', field: 'cover_letter', value: seeded });
+              }
+              updateField('has_cover_letter', true);
+            }}
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Cover Letter

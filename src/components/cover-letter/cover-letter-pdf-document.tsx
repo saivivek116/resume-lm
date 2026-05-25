@@ -1,18 +1,11 @@
 'use client';
 
-import { Resume, CoverLetterDocumentSettings } from "@/lib/types";
+import { Resume, CoverLetterDocumentSettings, DEFAULT_COVER_LETTER_SETTINGS } from "@/lib/types";
 import { Document as PDFDocument, Page as PDFPage, Text, View, StyleSheet, Link } from '@react-pdf/renderer';
 import { memo, useMemo } from 'react';
 import { parseCoverLetterHtml } from '@/lib/cover-letter-html-parser';
 
-export const DEFAULT_COVER_LETTER_SETTINGS: CoverLetterDocumentSettings = {
-  font_size: 11,
-  line_height: 1.4,
-  margin_vertical: 72,
-  margin_horizontal: 72,
-  header_name_size: 24,
-  paragraph_spacing: 12,
-};
+export { DEFAULT_COVER_LETTER_SETTINGS };
 
 const baseStyles = {
   link: {
