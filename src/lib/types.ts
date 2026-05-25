@@ -274,6 +274,15 @@ export interface CoverLetterData {
   document_settings?: CoverLetterDocumentSettings;
 }
 
+export const DEFAULT_COVER_LETTER_SETTINGS: CoverLetterDocumentSettings = {
+  font_size: 11,
+  line_height: 1.4,
+  margin_vertical: 72,
+  margin_horizontal: 72,
+  header_name_size: 24,
+  paragraph_spacing: 12,
+};
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -292,6 +301,7 @@ export interface Profile {
   projects: Project[];
   certifications: Certification[];
   document_settings?: DocumentSettings | null;
+  cover_letter_document_settings?: CoverLetterDocumentSettings | null;
   section_order?: ResumeSectionId[] | null;
   created_at: string;
   updated_at: string;
