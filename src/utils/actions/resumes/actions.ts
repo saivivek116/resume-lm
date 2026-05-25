@@ -11,6 +11,7 @@ import { initializeAIClient } from "@/utils/ai-tools";
 import { resumeScoreSchema } from "@/lib/zod-schemas";
 import { getDefaultModel } from "@/lib/ai-models";
 import { getSubscriptionAccessState } from "@/lib/subscription-access";
+import { generateProfessionalSummary } from "@/utils/actions/resumes/ai";
 import {
   FREE_PLAN_RESUME_LIMITS,
   getResumeLimitExceededMessage,
@@ -318,6 +319,39 @@ export async function createTailoredResume(
 
   await assertResumeQuota(supabase, user.id, 'tailored');
 
+  // Fetch job description (if available) so we can generate a JD-aligned summary.
+  let jobForSummary: { description: string | null; keywords: string[] | null } | null = null;
+  if (jobId) {
+    const { data: jobRow } = await supabase
+      .from('jobs')
+      .select('description, keywords')
+      .eq('id', jobId)
+      .maybeSingle();
+    if (jobRow) jobForSummary = jobRow;
+  }
+
+  // Best-effort AI summary; failure must not block resume creation.
+  let professionalSummary: string | null = null;
+  try {
+    professionalSummary = await generateProfessionalSummary({
+      profile: {
+        work_experience: (tailoredContent.work_experience ?? baseResume.work_experience ?? []) as WorkExperience[],
+        skills: (tailoredContent.skills ?? baseResume.skills ?? []) as Skill[],
+        projects: (tailoredContent.projects ?? baseResume.projects ?? []) as Project[],
+        education: (tailoredContent.education ?? baseResume.education ?? []) as Education[],
+        certifications: baseResume.certifications ?? [],
+      },
+      job: {
+        position_title: jobTitle,
+        company_name: companyName,
+        description: jobForSummary?.description ?? null,
+        keywords: jobForSummary?.keywords ?? null,
+      },
+    });
+  } catch (summaryError) {
+    console.warn('[createTailoredResume] professional summary generation failed:', summaryError);
+  }
+
   const newResume = {
     ...tailoredContent,
     user_id: user.id,
@@ -331,6 +365,7 @@ export async function createTailoredResume(
     website: baseResume.website,
     linkedin_url: baseResume.linkedin_url,
     github_url: baseResume.github_url,
+    professional_summary: professionalSummary,
     certifications: baseResume.certifications ?? [],
     document_settings: baseResume.document_settings,
     section_configs: baseResume.section_configs,
