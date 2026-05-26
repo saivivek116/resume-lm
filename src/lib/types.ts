@@ -37,6 +37,7 @@ export interface Certification {
 }
 
 export type ResumeSectionId =
+  | 'professional_summary'
   | 'skills'
   | 'work_experience'
   | 'projects'
@@ -44,6 +45,7 @@ export type ResumeSectionId =
   | 'certifications';
 
 export const DEFAULT_SECTION_ORDER: ResumeSectionId[] = [
+  'professional_summary',
   'skills',
   'work_experience',
   'projects',
@@ -52,6 +54,7 @@ export const DEFAULT_SECTION_ORDER: ResumeSectionId[] = [
 ];
 
 export const SECTION_LABELS: Record<ResumeSectionId, string> = {
+  professional_summary: 'Professional Summary',
   skills: 'Skills',
   work_experience: 'Work Experience',
   projects: 'Projects',
@@ -79,6 +82,26 @@ export interface ApplicationQuestion {
   createdAt: string;
 }
 
+export interface TheirStackMetadata {
+  seniority: string | null;
+  company_domain: string | null;
+  company_logo: string | null;
+  company_industry: string | null;
+  company_linkedin_url: string | null;
+  technology_slugs: string[];
+  date_posted: string | null;
+  discovered_at: string | null;
+  closed_at: string | null;
+  min_annual_salary_usd: number | null;
+  max_annual_salary_usd: number | null;
+  avg_annual_salary_usd: number | null;
+  country_code: string | null;
+  easy_apply: boolean | null;
+  reposted: boolean;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface Job {
   id: string;
   user_id: string;
@@ -95,6 +118,9 @@ export interface Job {
   updated_at: string;
   is_active: boolean;
   application_questions: ApplicationQuestion[];
+  source?: 'manual' | 'theirstack';
+  theirstack_id?: number | null;
+  theirstack_metadata?: TheirStackMetadata | null;
 }
 
 export interface SectionConfig {
@@ -118,6 +144,7 @@ export interface Resume {
   website?: string;
   linkedin_url?: string;
   github_url?: string;
+  professional_summary?: string | null;
   work_experience: WorkExperience[];
   education: Education[];
   skills: Skill[];
@@ -251,6 +278,15 @@ export interface CoverLetterData {
   document_settings?: CoverLetterDocumentSettings;
 }
 
+export const DEFAULT_COVER_LETTER_SETTINGS: CoverLetterDocumentSettings = {
+  font_size: 11,
+  line_height: 1.4,
+  margin_vertical: 72,
+  margin_horizontal: 72,
+  header_name_size: 24,
+  paragraph_spacing: 12,
+};
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -269,6 +305,7 @@ export interface Profile {
   projects: Project[];
   certifications: Certification[];
   document_settings?: DocumentSettings | null;
+  cover_letter_document_settings?: CoverLetterDocumentSettings | null;
   section_order?: ResumeSectionId[] | null;
   created_at: string;
   updated_at: string;

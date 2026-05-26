@@ -1,13 +1,13 @@
 'use server';
 
 // import { RESUME_IMPORTER_SYSTEM_MESSAGE, } from "@/lib/prompts";
-import { Resume } from "@/lib/types";
+import { Profile, Resume } from "@/lib/types";
 import { bulletImpactSortSchema, textImportSchema, workExperienceBulletPointsSchema } from "@/lib/zod-schemas";
-import { generateObject, type LanguageModelV1 } from "ai";
+import { generateObject, generateText, type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { getDefaultModel } from "@/lib/ai-models";
-import { BULLET_IMPACT_SORTER_MESSAGE, PROJECT_GENERATOR_MESSAGE, PROJECT_IMPROVER_MESSAGE, TEXT_ANALYZER_SYSTEM_MESSAGE, WORK_EXPERIENCE_GENERATOR_MESSAGE, WORK_EXPERIENCE_IMPROVER_MESSAGE } from "@/lib/prompts";
+import { BULLET_IMPACT_SORTER_MESSAGE, PROFESSIONAL_SUMMARY_GENERATOR_MESSAGE, PROJECT_GENERATOR_MESSAGE, PROJECT_IMPROVER_MESSAGE, TEXT_ANALYZER_SYSTEM_MESSAGE, WORK_EXPERIENCE_GENERATOR_MESSAGE, WORK_EXPERIENCE_IMPROVER_MESSAGE } from "@/lib/prompts";
 import { projectAnalysisSchema, workExperienceItemsSchema } from "@/lib/zod-schemas";
 import { WorkExperience } from "@/lib/types";
 
@@ -319,4 +319,66 @@ export async function sortBulletsByImpact(
     sortedIndices: valid ? indices : bullets.map((_, i) => i),
     reasoning: object.reasoning,
   };
+}
+
+// PROFESSIONAL SUMMARY GENERATION (used at tailored-resume creation)
+// Returns a 3-4 sentence summary paragraph that opens with
+// "<position_title> with 5+ years of experience" and is aligned to the JD.
+export async function generateProfessionalSummary(
+  params: {
+    profile: Pick<
+      Profile,
+      'work_experience' | 'skills' | 'projects' | 'education' | 'certifications'
+    >;
+    job: {
+      position_title: string;
+      company_name?: string | null;
+      description?: string | null;
+      keywords?: string[] | null;
+    };
+  },
+  config?: AIConfig
+): Promise<string> {
+  const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
+
+  const opener = `${params.job.position_title} with 5+ years of experience`;
+
+  const profileBlob = JSON.stringify(
+    {
+      work_experience: params.profile.work_experience,
+      skills: params.profile.skills,
+      projects: params.profile.projects,
+      certifications: params.profile.certifications,
+    },
+    null,
+    2
+  );
+
+  const jobBlob = [
+    `Position: ${params.job.position_title}`,
+    params.job.company_name ? `Company: ${params.job.company_name}` : '',
+    params.job.keywords && params.job.keywords.length
+      ? `Keywords: ${params.job.keywords.join(', ')}`
+      : '',
+    params.job.description ? `Description:\n${params.job.description}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const { text } = await generateText({
+    model: aiClient,
+    system: PROFESSIONAL_SUMMARY_GENERATOR_MESSAGE.content as string,
+    prompt: `REQUIRED OPENER (use VERBATIM as the start of the first sentence):
+"${opener}"
+
+CANDIDATE PROFILE (source of truth — only reference skills/experience present here):
+${profileBlob}
+
+TARGET JOB:
+${jobBlob}
+
+Write the professional summary paragraph now. 3-4 sentences, 60-90 words, plain text only.`,
+  });
+
+  return text.trim();
 }

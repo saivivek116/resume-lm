@@ -3,7 +3,8 @@
 import { Profile, Resume } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Mail, Phone, MapPin, Globe, Linkedin, Github, User, UserCircle2, LucideIcon } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Mail, Phone, MapPin, Globe, Linkedin, Github, User, UserCircle2, FileText, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useResumeContext } from '../resume-editor-context';
 import { memo, useCallback } from 'react';
@@ -187,9 +188,36 @@ export const BasicInfoForm = memo(function BasicInfoFormComponent({
                 type="url"
               />
             </div>
+
+            <div className="relative group">
+              <div className="absolute right-2.5 top-2.5">
+                <div className="p-1 rounded-full bg-teal-100/80 transition-transform duration-300 group-focus-within:scale-110">
+                  <FileText className="h-3.5 w-3.5 text-teal-600" />
+                </div>
+              </div>
+              <Textarea
+                value={resume.professional_summary || ''}
+                onChange={(e) =>
+                  dispatch({
+                    type: 'UPDATE_FIELD',
+                    field: 'professional_summary',
+                    value: e.target.value,
+                  })
+                }
+                rows={5}
+                className="pr-10 text-sm bg-white/50 border-gray-200 rounded-lg
+                  focus:border-teal-500/40 focus:ring-2 focus:ring-teal-500/20
+                  hover:border-teal-500/30 hover:bg-white/60 transition-colors
+                  placeholder:text-gray-400 resize-y"
+                placeholder="Software Engineer with 5+ years of experience..."
+              />
+              <div className="absolute -top-2 left-2 px-1 bg-white/80 text-[9px] font-medium text-teal-700">
+                PROFESSIONAL SUMMARY
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-}, areBasicInfoPropsEqual); 
+}, areBasicInfoPropsEqual);

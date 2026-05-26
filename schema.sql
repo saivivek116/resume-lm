@@ -164,6 +164,9 @@ ALTER TABLE public.profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS document_settings jsonb NULL;
 
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS cover_letter_document_settings jsonb NULL;
+
 -- Create updated_at trigger for profiles
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE
@@ -212,3 +215,20 @@ ALTER TABLE public.user_api_keys ENABLE ROW LEVEL SECURITY;
 CREATE POLICY user_api_keys_policy ON public.user_api_keys
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
+
+-- TheirStack Job Board
+-- Add source tracking and TheirStack-specific fields to jobs table
+ALTER TABLE public.jobs
+  ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'manual',
+  ADD COLUMN IF NOT EXISTS theirstack_id bigint,
+  ADD COLUMN IF NOT EXISTS theirstack_metadata jsonb;
+
+-- Unique constraint prevents duplicate pushes for the same TheirStack job per user
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_user_theirstack_unique;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_user_theirstack_unique UNIQUE (user_id, theirstack_id);
+
+-- Per-user secret for verifying TheirStack HMAC-SHA256 webhook signatures
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS theirstack_webhook_secret text;

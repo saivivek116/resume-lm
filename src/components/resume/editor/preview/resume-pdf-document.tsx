@@ -122,7 +122,24 @@ const HeaderSection = memo(function HeaderSection({
   );
 });
 
-const SkillsSection = memo(function SkillsSection({ 
+const ProfessionalSummarySection = memo(function ProfessionalSummarySection({
+  summary,
+  styles
+}: {
+  summary?: string | null;
+  styles: ReturnType<typeof createResumeStyles>;
+}) {
+  if (!summary || !summary.trim()) return null;
+
+  return (
+    <View style={styles.summarySection}>
+      <Text style={styles.sectionTitle}>Professional Summary</Text>
+      <Text style={styles.summaryText}>{summary}</Text>
+    </View>
+  );
+});
+
+const SkillsSection = memo(function SkillsSection({
   skills, 
   styles 
 }: { 
@@ -411,6 +428,18 @@ function createResumeStyles(settings: Resume['document_settings'] = {
       borderBottom: '0.5pt solid #374151',
       paddingBottom: 0,
     },
+    // Professional Summary section
+    summarySection: {
+      marginTop: experience_margin_top,
+      marginBottom: experience_margin_bottom,
+      marginLeft: experience_margin_horizontal,
+      marginRight: experience_margin_horizontal,
+    },
+    summaryText: {
+      fontSize: document_font_size,
+      color: '#111827',
+      marginTop: 2,
+    },
     // Skills section
     skillsSection: {
       marginTop: skills_margin_top,
@@ -631,8 +660,15 @@ export const ResumePDFDocument = memo(function ResumePDFDocument({ resume }: Res
     >
       <PDFPage size="LETTER" style={styles.page}>
         <HeaderSection resume={resume} styles={styles} />
-        {(resume.section_order ?? DEFAULT_SECTION_ORDER).map((id) => {
+        {(() => {
+          const order = resume.section_order ?? DEFAULT_SECTION_ORDER;
+          return order.includes('professional_summary')
+            ? order
+            : (['professional_summary', ...order] as typeof order);
+        })().map((id) => {
           switch (id) {
+            case 'professional_summary':
+              return <ProfessionalSummarySection key={id} summary={resume.professional_summary} styles={styles} />;
             case 'skills':
               return <SkillsSection key={id} skills={resume.skills} styles={styles} />;
             case 'work_experience':

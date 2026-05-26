@@ -18,7 +18,17 @@ export default async function SettingsPage() {
         .maybeSingle()
     : { data: null };
 
+  const { data: profile } = user
+    ? await supabase
+        .from('profiles')
+        .select('theirstack_webhook_secret')
+        .eq('user_id', user.id)
+        .maybeSingle()
+    : { data: null };
+
   const subscriptionStatus = subscription?.subscription_status ?? '';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+  const theirStackWebhookUrl = user ? `${baseUrl}/api/webhooks/theirstack/${user.id}` : '';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
@@ -27,6 +37,8 @@ export default async function SettingsPage() {
           user={user}
           subscriptionStatus={subscriptionStatus}
           subscriptionSnapshot={subscription}
+          theirStackWebhookUrl={theirStackWebhookUrl}
+          theirStackHasSecret={!!profile?.theirstack_webhook_secret}
         />
       </main>
     </div>

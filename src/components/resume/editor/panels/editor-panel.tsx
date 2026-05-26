@@ -192,6 +192,7 @@ export function EditorPanel({
                 <CoverLetterPanel
                   resume={resume}
                   job={job}
+                  profile={profile}
                 />
               </TabsContent>
 

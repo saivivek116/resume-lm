@@ -9,11 +9,13 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 import type { SubscriptionSnapshot } from "@/lib/subscription-access"
+import { TheirStackWebhookSection } from "./theirstack-webhook-section"
 
 const sections = [
   { id: "security", title: "Security", description: "Manage your email and password settings", icon: "🔒" },
   { id: "subscription", title: "Subscription", description: "Manage your subscription and billing settings", icon: "💳" },
   { id: "ai-prompts", title: "AI Prompts", description: "Customize AI system prompts for different actions", icon: "🤖" },
+  { id: "theirstack-webhook", title: "TheirStack", description: "Configure TheirStack job board webhook", icon: "🔗" },
   { id: "danger-zone", title: "Danger Zone", description: "Irreversible and destructive actions", icon: "⚠️" },
 ]
 
@@ -21,9 +23,11 @@ interface SettingsContentProps {
   user: User | null;
   subscriptionStatus: string;
   subscriptionSnapshot: SubscriptionSnapshot | null;
+  theirStackWebhookUrl: string;
+  theirStackHasSecret: boolean;
 }
 
-export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot }: SettingsContentProps) {
+export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot, theirStackWebhookUrl, theirStackHasSecret }: SettingsContentProps) {
   const [activeSection, setActiveSection] = useState<string>("security")
 
   useEffect(() => {
@@ -124,6 +128,20 @@ export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot
           </CardHeader>
           <CardContent>
             <AiPromptsForm />
+          </CardContent>
+        </Card>
+
+        {/* TheirStack Webhook */}
+        <Card id="theirstack-webhook" className="border-white/40 shadow-xl shadow-black/5 bg-white/80 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-xl">TheirStack Webhook</CardTitle>
+            <CardDescription>Configure TheirStack job board webhook to auto-ingest job listings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TheirStackWebhookSection
+              webhookUrl={theirStackWebhookUrl}
+              hasSecret={theirStackHasSecret}
+            />
           </CardContent>
         </Card>
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { Profile, WorkExperience, Education, Project, DEFAULT_DOCUMENT_SETTINGS, ResumeSectionId } from "@/lib/types";
+import { Profile, WorkExperience, Education, Project, DEFAULT_DOCUMENT_SETTINGS, DEFAULT_COVER_LETTER_SETTINGS, ResumeSectionId, CoverLetterDocumentSettings } from "@/lib/types";
+import { CoverLetterSettingsForm } from "@/components/cover-letter/cover-letter-settings-form";
 import type { ServiceName } from '@/lib/types';
 import { ProfileApiKeysForm } from '@/components/profile/profile-api-keys-form';
 import { Card } from "@/components/ui/card";
@@ -874,7 +875,7 @@ export function ProfileEditForm({ profile: initialProfile, keyStatus }: ProfileE
                     </Card>
                   </TabsContent>
 
-                  <TabsContent value="style-defaults" className="mt-6 animate-in fade-in-50 slide-in-from-bottom-2 duration-500">
+                  <TabsContent value="style-defaults" className="mt-6 animate-in fade-in-50 slide-in-from-bottom-2 duration-500 space-y-6">
                     <Card className="bg-gradient-to-br from-white/50 via-white/40 to-white/50 backdrop-blur-xl border-white/40 shadow-2xl transition-all duration-500 hover:shadow-3xl rounded-2xl overflow-hidden group">
                       <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
                       <div className="relative p-8">
@@ -883,6 +884,22 @@ export function ProfileEditForm({ profile: initialProfile, keyStatus }: ProfileE
                           onChange={(_field, value) => updateField('document_settings', value)}
                           sectionOrder={profile.section_order ?? undefined}
                           onSectionOrderChange={(order: ResumeSectionId[]) => updateField('section_order', order)}
+                        />
+                      </div>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-white/50 via-white/40 to-white/50 backdrop-blur-xl border-white/40 shadow-2xl transition-all duration-500 hover:shadow-3xl rounded-2xl overflow-hidden group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                      <div className="relative p-8">
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold text-slate-900">Cover Letter Style Defaults</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            These settings are used when you create a new cover letter for any resume.
+                          </p>
+                        </div>
+                        <CoverLetterSettingsForm
+                          settings={profile.cover_letter_document_settings ?? DEFAULT_COVER_LETTER_SETTINGS}
+                          onChange={(value: CoverLetterDocumentSettings) => updateField('cover_letter_document_settings', value)}
                         />
                       </div>
                     </Card>

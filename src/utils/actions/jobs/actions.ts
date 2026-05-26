@@ -98,12 +98,13 @@ export async function getJobListings({
   // Calculate offset
   const offset = (page - 1) * pageSize;
 
-  // Start building the query
+  // Start building the query — job board shows TheirStack jobs only
   let query = supabase
     .from('jobs')
     .select('*', { count: 'exact' })
     .eq('user_id', user.id)
     .eq('is_active', true)
+    .eq('source', 'theirstack')
     .order('created_at', { ascending: false });
 
   // Apply filters if they exist
@@ -116,6 +117,9 @@ export async function getJobListings({
     }
     if (filters.keywords && filters.keywords.length > 0) {
       query = query.contains('keywords', filters.keywords);
+    }
+    if (filters.discoveredAfter) {
+      query = query.gte('created_at', filters.discoveredAfter);
     }
   }
 
@@ -209,4 +213,110 @@ export async function createEmptyJob(): Promise<Job> {
 
   revalidatePath('/', 'layout');
   return data;
-} 
+}
+
+export async function getJobById(jobId: string): Promise<Job | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', jobId)
+    .eq('user_id', user.id)
+    .single();
+  return data;
+}
+
+export async function getAppliedJobIds(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return [];
+
+  const { data } = await supabase
+    .from('resumes')
+    .select('job_id')
+    .eq('user_id', user.id)
+    .eq('is_base_resume', false)
+    .not('job_id', 'is', null);
+
+  return (data ?? []).map(r => r.job_id as string);
+}
+
+export async function getJobResumeMap(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return {};
+
+  const { data } = await supabase
+    .from('resumes')
+    .select('id, job_id')
+    .eq('user_id', user.id)
+    .eq('is_base_resume', false)
+    .not('job_id', 'is', null);
+
+  return Object.fromEntries((data ?? []).map(r => [r.job_id as string, r.id as string]));
+}
+
+export async function getJobsPageData({
+  page = 1,
+  pageSize = 10,
+  filters,
+}: JobListingParams): Promise<{
+  jobs: Job[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  jobResumeMap: Record<string, string>;
+}> {
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  const offset = (page - 1) * pageSize;
+
+  let query = supabase
+    .from('jobs')
+    .select('*', { count: 'exact' })
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .eq('source', 'theirstack')
+    .order('created_at', { ascending: false });
+
+  if (filters) {
+    if (filters.workLocation) query = query.eq('work_location', filters.workLocation);
+    if (filters.employmentType) query = query.eq('employment_type', filters.employmentType);
+    if (filters.keywords && filters.keywords.length > 0) query = query.contains('keywords', filters.keywords);
+    if (filters.discoveredAfter) query = query.gte('created_at', filters.discoveredAfter);
+  }
+
+  const [listingsResult, resumesResult] = await Promise.all([
+    query.range(offset, offset + pageSize - 1),
+    supabase
+      .from('resumes')
+      .select('id, job_id')
+      .eq('user_id', user.id)
+      .eq('is_base_resume', false)
+      .not('job_id', 'is', null),
+  ]);
+
+  if (listingsResult.error) {
+    console.error('Error fetching jobs:', listingsResult.error);
+    throw new Error('Failed to fetch job listings');
+  }
+
+  const jobResumeMap = Object.fromEntries(
+    (resumesResult.data ?? []).map(r => [r.job_id as string, r.id as string])
+  );
+
+  return {
+    jobs: listingsResult.data ?? [],
+    totalCount: listingsResult.count ?? 0,
+    currentPage: page,
+    totalPages: Math.ceil((listingsResult.count ?? 0) / pageSize),
+    jobResumeMap,
+  };
+}

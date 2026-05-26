@@ -596,8 +596,6 @@ Rules:
 - If a target role is provided, weight bullets that match that role's responsibilities slightly higher.`
 };
 
-<<<<<<< Updated upstream
-=======
 
 export const PROFESSIONAL_SUMMARY_GENERATOR_MESSAGE: ChatCompletionMessageParam = {
   role: "system",
@@ -627,4 +625,3 @@ CONTENT GUIDANCE:
 
 Return ONLY the summary paragraph. No preamble, no quotes, no explanations.`
 };
->>>>>>> Stashed changes
