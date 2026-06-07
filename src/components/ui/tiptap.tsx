@@ -83,9 +83,29 @@ const Tiptap = memo(
       immediatelyRender: false,
     });
 
-    // Sync editor content when content prop changes
+    // Sync editor content when the content prop changes from the OUTSIDE
+    // (e.g. AI rewrite, undo, sort-by-impact, accepting a suggestion).
+    //
+    // While the user is actively typing, the content prop change originates
+    // from this editor's own (debounced) onChange round-tripping back through
+    // parent state. Re-applying it via setContent resets the ProseMirror
+    // selection to the end of the document, which is what caused the cursor to
+    // jump to the end when editing in the middle of a point. Guarding on
+    // `editor.isFocused` skips those self-induced updates; external updates
+    // always happen while the editor is blurred, so they still sync.
     useEffect(() => {
-      if (editor && content !== editor.getHTML().replace(/<p>/g, '').replace(/<\/p>/g, '').trim()) {
+      if (!editor || editor.isFocused) return;
+
+      // Normalize the editor's current HTML the same way onUpdate does so the
+      // comparison is accurate (including bold, which onUpdate stores as **).
+      const current = editor
+        .getHTML()
+        .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+        .replace(/<p>/g, '')
+        .replace(/<\/p>/g, '')
+        .trim();
+
+      if (content !== current) {
         editor.commands.setContent(transformContent(content));
       }
     }, [content, editor, transformContent]);

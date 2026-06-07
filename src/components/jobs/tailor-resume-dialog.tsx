@@ -11,7 +11,7 @@ import { getResumeById, createTailoredResume } from "@/utils/actions/resumes/act
 import { tailorResumeToJob, checkJobEligibility } from "@/utils/actions/jobs/ai";
 import { BaseResumeSelector } from "@/components/resume/management/base-resume-selector";
 import { LoadingOverlay, type CreationStep } from "@/components/resume/management/loading-overlay";
-import { EligibilityWarningDialog } from "@/components/resume/management/dialogs/eligibility-warning-dialog";
+import { confirmEligibilityOverride } from "@/utils/eligibility-warning";
 import { ApiErrorDialog } from "@/components/ui/api-error-dialog";
 import { toast } from "@/hooks/use-toast";
 import type { Job, ResumeSummary } from "@/lib/types";
@@ -33,7 +33,6 @@ export function TailorResumeDialog({ job, children }: TailorResumeDialogProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState<CreationStep>('tailoring');
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
-  const [eligibilityWarning, setEligibilityWarning] = useState<{ open: boolean; flaggedSentences: string[] }>({ open: false, flaggedSentences: [] });
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
 
@@ -63,7 +62,6 @@ export function TailorResumeDialog({ job, children }: TailorResumeDialogProps) {
       }).finally(() => setIsFetchingResumes(false));
     } else {
       setIsCheckingEligibility(false);
-      setEligibilityWarning({ open: false, flaggedSentences: [] });
     }
   };
 
@@ -88,8 +86,7 @@ export function TailorResumeDialog({ job, children }: TailorResumeDialogProps) {
           setIsCheckingEligibility(false);
         }
 
-        if (flagged) {
-          setEligibilityWarning({ open: true, flaggedSentences });
+        if (flagged && !confirmEligibilityOverride(flaggedSentences)) {
           setIsCreating(false);
           return;
         }
@@ -249,16 +246,6 @@ export function TailorResumeDialog({ job, children }: TailorResumeDialogProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      <EligibilityWarningDialog
-        open={eligibilityWarning.open}
-        flaggedSentences={eligibilityWarning.flaggedSentences}
-        onContinue={() => {
-          setEligibilityWarning({ open: false, flaggedSentences: [] });
-          doTailor(true);
-        }}
-        onGoBack={() => setEligibilityWarning({ open: false, flaggedSentences: [] })}
-      />
 
       <ApiErrorDialog
         open={showErrorDialog}

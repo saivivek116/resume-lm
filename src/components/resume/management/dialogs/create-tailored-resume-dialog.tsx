@@ -11,7 +11,7 @@ import { Loader2, Sparkles, Plus, Brain, Copy } from "lucide-react";
 import { createTailoredResume, getResumeById } from "@/utils/actions/resumes/actions";
 import { CreateBaseResumeDialog } from "./create-base-resume-dialog";
 import { tailorResumeToJob, formatJobListing, checkJobEligibility } from "@/utils/actions/jobs/ai";
-import { EligibilityWarningDialog } from "./eligibility-warning-dialog";
+import { confirmEligibilityOverride } from "@/utils/eligibility-warning";
 import { createJob } from "@/utils/actions/jobs/actions";
 import { MiniResumePreview } from "../../shared/mini-resume-preview";
 import { LoadingOverlay, type CreationStep } from "../loading-overlay";
@@ -39,7 +39,6 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
   const [isBaseResumeInvalid, setIsBaseResumeInvalid] = useState(false);
   const [isJobDescriptionInvalid, setIsJobDescriptionInvalid] = useState(false);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
-  const [eligibilityWarning, setEligibilityWarning] = useState<{ open: boolean; flaggedSentences: string[] }>({ open: false, flaggedSentences: [] });
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
   const router = useRouter();
@@ -297,7 +296,6 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
       setSelectedBaseResume(baseResumes?.[0]?.id || '');
     } else {
       setIsCheckingEligibility(false);
-      setEligibilityWarning({ open: false, flaggedSentences: [] });
     }
   };
 
@@ -323,15 +321,19 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
     }
 
     if (importOption === 'ai' && jobDescription.trim()) {
+      let flagged = false;
+      let flaggedSentences: string[] = [];
       setIsCheckingEligibility(true);
       try {
-        const { flagged, flaggedSentences } = await checkJobEligibility(jobDescription);
-        if (flagged) {
-          setEligibilityWarning({ open: true, flaggedSentences });
-          return;
-        }
+        const result = await checkJobEligibility(jobDescription);
+        flagged = result.flagged;
+        flaggedSentences = result.flaggedSentences;
       } finally {
         setIsCheckingEligibility(false);
+      }
+
+      if (flagged && !confirmEligibilityOverride(flaggedSentences)) {
+        return;
       }
     }
 
@@ -629,16 +631,6 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
           </div>
         </DialogContent>
       </Dialog>
-
-      <EligibilityWarningDialog
-        open={eligibilityWarning.open}
-        flaggedSentences={eligibilityWarning.flaggedSentences}
-        onGoBack={() => setEligibilityWarning({ open: false, flaggedSentences: [] })}
-        onContinue={() => {
-          setEligibilityWarning({ open: false, flaggedSentences: [] });
-          proceedWithCreate();
-        }}
-      />
 
       {/* Error Dialog */}
       <ApiErrorDialog
