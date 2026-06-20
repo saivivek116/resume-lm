@@ -10,12 +10,16 @@ import Tiptap from "@/components/ui/tiptap";
 
 const DIFF_HIGHLIGHT_CLASSES = "bg-green-300 px-1  rounded-sm";
 
-type SuggestionContent = WorkExperience | Project | Skill | Education;
+type SuggestionContent = WorkExperience | Project | Skill | Education | string;
 
 interface SuggestionProps {
-  type: 'work_experience' | 'project' | 'skill' | 'education';
-  content: SuggestionContent;
+  type: 'work_experience' | 'project' | 'skill' | 'education' | 'summary';
+  content?: SuggestionContent;
   currentContent: SuggestionContent | null;
+  // Work-experience suggestions carry a sparse list of bullet operations
+  // instead of a full content object.
+  operations?: BulletOperation[];
+  technologies?: string[] | null;
   onAccept: () => void;
   onReject: () => void;
 }
@@ -25,69 +29,93 @@ interface WholeResumeSuggestionProps {
 }
 
 interface WorkExperienceSuggestionProps {
-  content: WorkExperience;
-  currentContent: WorkExperience | null;
+  // The current entry being edited; header (position/company/date) is shown
+  // as-is since this path only edits bullets and technologies.
+  currentContent: WorkExperience;
+  operations: BulletOperation[];
+  technologies?: string[] | null;
 }
 
-function WorkExperienceSuggestion({ content: work, currentContent: currentWork }: WorkExperienceSuggestionProps) {
+// Renders a single bullet using the word-level green diff against its previous
+// text (or all-green when there is no previous text, i.e. an added bullet).
+function DiffBullet({ current, suggested }: { current: string | null; suggested: string }) {
+  const comparedWords = current
+    ? compareDescriptions(current, suggested)
+    : [{ text: suggested.replace(/\*\*/g, ''), isNew: true, isBold: false, isStart: true, isEnd: true }];
+
+  return (
+    <p className="text-sm text-gray-800 flex-1 flex flex-wrap">
+      {comparedWords.map((word, wordIndex) => (
+        <span
+          key={wordIndex}
+          className={cn(
+            "inline-flex items-center",
+            word.isStart && "rounded-l-sm pl-1",
+            word.isEnd && "rounded-r-sm pr-1",
+            wordIndex < comparedWords.length - 1 && "mr-1",
+            word.isNew && "bg-green-300 px-1 mx-0",
+          )}
+        >
+          {word.isBold ? <strong>{word.text}</strong> : word.text}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function WorkExperienceSuggestion({ currentContent: currentWork, operations, technologies }: WorkExperienceSuggestionProps) {
+  const rows = buildBulletRows(currentWork.description, operations);
+
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-start">
         <div>
-          <h3 className={cn(
-            "text-base font-bold text-gray-900",
-            !currentWork || currentWork.position !== work.position && DIFF_HIGHLIGHT_CLASSES
-          )}>
-            {work.position.replace(/\*\*/g, '')}
+          <h3 className="text-base font-bold text-gray-900">
+            {currentWork.position.replace(/\*\*/g, '')}
           </h3>
-          <p className={cn(
-            "text-xs text-gray-700",
-            !currentWork || currentWork.company !== work.company && DIFF_HIGHLIGHT_CLASSES
-          )}>
-            {work.company}
+          <p className="text-xs text-gray-700">
+            {currentWork.company}
           </p>
         </div>
-        <span className={cn(
-          "text-[10px] text-gray-600",
-          !currentWork || currentWork.date !== work.date && DIFF_HIGHLIGHT_CLASSES
-        )}>
-          {work.date}
+        <span className="text-[10px] text-gray-600">
+          {currentWork.date}
         </span>
       </div>
       <div className="space-y-1.5">
-        {work.description.map((point, index) => {
-          const currentPoint = currentWork?.description?.[index];
-          const comparedWords = currentPoint 
-            ? compareDescriptions(currentPoint, point)
-            : [{ text: point.replace(/\*\*/g, ''), isNew: true, isBold: false, isStart: true, isEnd: true }];
-
-          return (
-            <div key={index} className="flex items-start gap-1.5">
-              <span className="text-gray-800 mt-0.5 text-xs">•</span>
-              <p className="text-sm text-gray-800 flex-1 flex flex-wrap">
-                {comparedWords.map((word, wordIndex) => (
-                  <span
-                    key={wordIndex}
-                    className={cn(
-                      "inline-flex items-center",
-                      word.isStart && "rounded-l-sm pl-1",
-                      word.isEnd && "rounded-r-sm pr-1",
-                      wordIndex < comparedWords.length - 1 && "mr-1",
-                      word.isNew && "bg-green-300 px-1 mx-0",
-                    )}
-                  >
-                    {word.isBold ? (
-                      <strong>{word.text}</strong>
-                    ) : (
-                      word.text
-                    )}
-                  </span>
-                ))}
+        {rows.map((row, index) => (
+          <div key={index} className="flex items-start gap-1.5">
+            <span className="text-gray-800 mt-0.5 text-xs">•</span>
+            {row.kind === 'removed' ? (
+              <p className="text-sm flex-1 line-through text-rose-700 bg-rose-100 rounded-sm px-1">
+                {row.text.replace(/\*\*/g, '')}
               </p>
-            </div>
-          );
-        })}
+            ) : row.kind === 'replaced' ? (
+              <DiffBullet current={row.currentText} suggested={row.text} />
+            ) : row.kind === 'added' ? (
+              <DiffBullet current={null} suggested={row.text} />
+            ) : (
+              <p className="text-sm text-gray-800 flex-1">{row.text.replace(/\*\*/g, '')}</p>
+            )}
+          </div>
+        ))}
       </div>
+      {technologies && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {technologies.map((tech, index) => (
+            <span
+              key={index}
+              className={cn(
+                "px-2 py-0.5 text-xs rounded-full border text-gray-700",
+                isNewItem(currentWork.technologies, technologies, tech)
+                  ? DIFF_HIGHLIGHT_CLASSES
+                  : "bg-gray-100/80 border-gray-200/60"
+              )}
+            >
+              {tech.replace(/\*\*/g, '')}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -413,6 +441,64 @@ function isNewItem<T>(current: T[] | undefined, suggested: T[] | undefined, item
   return !current.includes(item);
 }
 
+// A single change to a work experience's bullet list. Indices refer to the
+// CURRENT description array; adds are appended at the end so indices never shift.
+export interface BulletOperation {
+  operation: 'replace' | 'add' | 'remove';
+  index: number | null;
+  text: string | null;
+}
+
+// Render model for the suggestion card: current bullets in order (tagged),
+// followed by appended adds.
+export type BulletRow =
+  | { kind: 'unchanged'; text: string }
+  | { kind: 'replaced'; currentText: string; text: string }
+  | { kind: 'removed'; text: string }
+  | { kind: 'added'; text: string };
+
+function isValidIndex(idx: number | null, length: number): idx is number {
+  return idx !== null && Number.isInteger(idx) && idx >= 0 && idx < length;
+}
+
+export function buildBulletRows(current: string[], ops: BulletOperation[]): BulletRow[] {
+  // Map each current bullet to its (last) replace/remove op, if any.
+  const replacements = new Map<number, string>();
+  const removed = new Set<number>();
+
+  for (const op of ops) {
+    if (op.operation === 'replace' && isValidIndex(op.index, current.length) && op.text !== null) {
+      replacements.set(op.index, op.text);
+      removed.delete(op.index);
+    } else if (op.operation === 'remove' && isValidIndex(op.index, current.length)) {
+      removed.add(op.index);
+      replacements.delete(op.index);
+    }
+  }
+
+  const rows: BulletRow[] = current.map((text, i) => {
+    if (removed.has(i)) return { kind: 'removed', text };
+    const replacement = replacements.get(i);
+    if (replacement !== undefined) return { kind: 'replaced', currentText: text, text: replacement };
+    return { kind: 'unchanged', text };
+  });
+
+  for (const op of ops) {
+    if (op.operation === 'add' && op.text !== null) {
+      rows.push({ kind: 'added', text: op.text });
+    }
+  }
+
+  return rows;
+}
+
+export function applyBulletOperations(current: string[], ops: BulletOperation[]): string[] {
+  const rows = buildBulletRows(current, ops);
+  return rows
+    .filter((row) => row.kind !== 'removed')
+    .map((row) => row.text);
+}
+
 // const renderBoldText = (text: string) => {
 //   return text.split(/(\*\*.*?\*\*)/).map((part, index) => {
 //     if (part.startsWith('**') && part.endsWith('**')) {
@@ -422,7 +508,23 @@ function isNewItem<T>(current: T[] | undefined, suggested: T[] | undefined, item
 //   });
 // };
 
-export function Suggestion({ type, content, currentContent, onAccept, onReject }: SuggestionProps) {
+interface SummarySuggestionProps {
+  content: string;
+  currentContent: string | null;
+}
+
+function SummarySuggestion({ content, currentContent }: SummarySuggestionProps) {
+  return (
+    <div className="space-y-2 w-full">
+      {currentContent && (
+        <p className="text-xs text-gray-400 line-through">{currentContent}</p>
+      )}
+      <p className={cn("text-sm leading-relaxed text-gray-900", DIFF_HIGHLIGHT_CLASSES)}>{content}</p>
+    </div>
+  );
+}
+
+export function Suggestion({ type, content, currentContent, operations, technologies, onAccept, onReject }: SuggestionProps) {
   const [status, setStatus] = useState<'pending' | 'accepted' | 'rejected'>('pending');
 
   const handleAccept = () => {
@@ -471,13 +573,15 @@ export function Suggestion({ type, content, currentContent, onAccept, onReject }
   const renderContent = () => {
     switch (type) {
       case 'work_experience':
-        return <WorkExperienceSuggestion content={content as WorkExperience} currentContent={currentContent as WorkExperience | null} />;
+        return <WorkExperienceSuggestion currentContent={currentContent as WorkExperience} operations={operations ?? []} technologies={technologies} />;
       case 'project':
         return <ProjectSuggestion content={content as Project} currentContent={currentContent as Project | null} />;
       case 'skill':
         return <SkillSuggestion content={content as Skill} currentContent={currentContent as Skill | null} />;
       case 'education':
         return <EducationSuggestion content={content as Education} currentContent={currentContent as Education | null} />;
+      case 'summary':
+        return <SummarySuggestion content={content as string} currentContent={currentContent as string | null} />;
     }
   };
 
