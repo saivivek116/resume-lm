@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useResumeContext } from "../../editor/resume-editor-context";
+import { useResumeEditorStore } from "../../editor/store/resume-editor-store-provider";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { BriefcaseIcon } from "lucide-react";
 import { formatJobListing } from "@/utils/actions/jobs/ai";
@@ -35,7 +35,9 @@ export function TailoredJobCard({
   isLoading: externalIsLoading 
 }: TailoredJobCardProps) {
   const router = useRouter();
-  const { state, dispatch } = useResumeContext();
+  const resume = useResumeEditorStore((s) => s.resume);
+  const updateField = useResumeEditorStore((s) => s.updateField);
+  const markSaved = useResumeEditorStore((s) => s.markSaved);
 
   // Only use internal state if external job is not provided
   const [internalJob, setInternalJob] = useState<Job | null>(null);
@@ -145,14 +147,13 @@ export function TailoredJobCard({
       // Create job in database
       const newJob = await createJob(formattedJob);
       
-      // Update resume with new job ID using context
-      dispatch({ type: 'UPDATE_FIELD', field: 'job_id', value: newJob.id });
-      
-      // Save the changes to the database
-      await updateResume(state.resume.id, {
-        ...state.resume,
-        job_id: newJob.id
-      });
+      // Update resume with new job ID in the store
+      updateField('job_id', newJob.id);
+
+      // Save the changes to the database and sync the saved baseline
+      const savedResume = { ...resume, job_id: newJob.id };
+      await updateResume(savedResume.id, savedResume);
+      markSaved(savedResume);
       
       // Close dialog and refresh
       setCreateDialogOpen(false);

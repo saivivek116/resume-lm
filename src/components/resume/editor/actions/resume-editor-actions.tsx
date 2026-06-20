@@ -9,7 +9,7 @@ import { TextImport } from "../../text-import";
 import { ResumePDFDocument } from "../preview/resume-pdf-document";
 import { CoverLetterPDFDocument } from "@/components/cover-letter/cover-letter-pdf-document";
 import { cn } from "@/lib/utils";
-import { useResumeContext } from "../resume-editor-context";
+import { useResumeEditorStore } from "../store/resume-editor-store-provider";
 
 import { updateResume } from "@/utils/actions/resumes/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,8 +23,11 @@ interface ResumeEditorActionsProps {
 export function ResumeEditorActions({
   onResumeChange
 }: ResumeEditorActionsProps) {
-  const { state, dispatch } = useResumeContext();
-  const { resume, isSaving } = state;
+  const resume = useResumeEditorStore((s) => s.resume);
+  const isSaving = useResumeEditorStore((s) => s.isSaving);
+  const hasUnsavedChanges = useResumeEditorStore((s) => s.hasUnsavedChanges);
+  const setSaving = useResumeEditorStore((s) => s.setSaving);
+  const markSaved = useResumeEditorStore((s) => s.markSaved);
   const [downloadOptions, setDownloadOptions] = useState({
     resume: true,
     coverLetter: true
@@ -33,8 +36,9 @@ export function ResumeEditorActions({
   // Save Resume
   const handleSave = async () => {
     try {
-      dispatch({ type: 'SET_SAVING', value: true });
-      await updateResume(state.resume.id, state.resume);
+      setSaving(true);
+      await updateResume(resume.id, resume);
+      markSaved(resume);
       toast({
         title: "Changes saved",
         description: "Your resume has been updated successfully.",
@@ -46,7 +50,7 @@ export function ResumeEditorActions({
         variant: "destructive",
       });
     } finally {
-      dispatch({ type: 'SET_SAVING', value: false });
+      setSaving(false);
     }
   };
 
@@ -97,8 +101,28 @@ export function ResumeEditorActions({
     colors.actionShadow
   );
 
+  const saveStatus = isSaving
+    ? "Saving…"
+    : hasUnsavedChanges
+      ? "Unsaved changes"
+      : "All changes saved";
+
   return (
     <div className="px-1 py-2 @container">
+      <div className="flex justify-end px-1 pb-1">
+        <span
+          className={cn(
+            "text-[10px] font-medium transition-colors",
+            isSaving
+              ? "text-amber-600"
+              : hasUnsavedChanges
+                ? "text-gray-400"
+                : "text-emerald-600"
+          )}
+        >
+          {saveStatus}
+        </span>
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {/* Text Import Button */}
         <TextImport

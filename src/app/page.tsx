@@ -100,16 +100,6 @@ export default async function Page() {
             <FeatureHighlights />
           </section>
 
-          {/* Creator Story Section */}
-          <section id="about" aria-labelledby="about-heading">
-            <CreatorStory />
-          </section>
-
-          {/* Pricing Plans Section */}
-          <section id="pricing" aria-labelledby="pricing-heading">
-            <PricingPlans />
-          </section>
-
           {/* FAQ Section */}
           <FAQ />
 
