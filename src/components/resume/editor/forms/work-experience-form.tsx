@@ -22,6 +22,7 @@ import { generateWorkExperiencePoints, improveWorkExperience, sortBulletsByImpac
 import { AIImprovementPrompt } from "../../shared/ai-improvement-prompt";
 import { AIGenerationSettingsTooltip } from "../components/ai-generation-tooltip";
 import { AISuggestions } from "../../shared/ai-suggestions";
+import { useResumeEditorStore } from "../store/resume-editor-store-provider";
 
 
 interface AISuggestion {
@@ -30,8 +31,6 @@ interface AISuggestion {
 }
 
 interface WorkExperienceFormProps {
-  experiences: WorkExperience[];
-  onChange: (experiences: WorkExperience[]) => void;
   profile: Profile;
   targetRole?: string;
 }
@@ -45,25 +44,33 @@ interface ImprovementConfig {
   [key: number]: { [key: number]: string }; // expIndex -> pointIndex -> prompt
 }
 
-// Create a comparison function
+// Create a comparison function. The resume data now comes from the Zustand store
+// (via useResumeEditorStore), so only the genuinely prop-driven inputs are compared.
 function areWorkExperiencePropsEqual(
   prevProps: WorkExperienceFormProps,
   nextProps: WorkExperienceFormProps
 ) {
   return (
     prevProps.targetRole === nextProps.targetRole &&
-    JSON.stringify(prevProps.experiences) === JSON.stringify(nextProps.experiences) &&
     prevProps.profile.id === nextProps.profile.id
   );
 }
 
 // Export the memoized component
-export const WorkExperienceForm = memo(function WorkExperienceFormComponent({ 
-  experiences, 
-  onChange, 
-  profile, 
-  targetRole = "Software Engineer" 
+export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
+  profile,
+  targetRole = "Software Engineer"
 }: WorkExperienceFormProps) {
+  // Resume data + mutations come from the store. Granular bullet actions mutate the
+  // LATEST state, eliminating the stale-closure bug that dropped freshly added points.
+  const experiences = useResumeEditorStore((s) => s.resume.work_experience);
+  const updateField = useResumeEditorStore((s) => s.updateField);
+  const addBullet = useResumeEditorStore((s) => s.addBullet);
+  const updateBullet = useResumeEditorStore((s) => s.updateBullet);
+  const removeBullet = useResumeEditorStore((s) => s.removeBullet);
+  const moveBulletAction = useResumeEditorStore((s) => s.moveBullet);
+
+  const onChange = (updated: WorkExperience[]) => updateField('work_experience', updated);
   const [aiSuggestions, setAiSuggestions] = useState<{ [key: number]: AISuggestion[] }>({});
   const [loadingAI, setLoadingAI] = useState<{ [key: number]: boolean }>({});
   const [loadingPointAI, setLoadingPointAI] = useState<{ [key: number]: { [key: number]: boolean } }>({});
@@ -156,13 +163,6 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     const newBulletIndex = bulletIndex + direction;
     if (newBulletIndex < 0 || newBulletIndex >= exp.description.length) return;
 
-    const newDesc = [...exp.description];
-    const [item] = newDesc.splice(bulletIndex, 1);
-    newDesc.splice(newBulletIndex, 0, item);
-
-    const updated = [...experiences];
-    updated[expIndex] = { ...exp, description: newDesc };
-
     // Remap inner per-bullet maps for this entry only.
     const remapInner = <T,>(outer: Record<number, Record<number, T>>) => {
       if (!outer[expIndex]) return outer;
@@ -172,7 +172,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
     setLoadingPointAI((prev) => remapInner(prev));
     setImprovementConfig((prev) => remapInner(prev));
 
-    onChange(updated);
+    moveBulletAction('work_experience', expIndex, bulletIndex, direction);
   };
 
   const sortBulletsByAI = async (expIndex: number) => {
@@ -292,10 +292,8 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
   };
 
   const approveSuggestion = (expIndex: number, suggestion: AISuggestion) => {
-    const updated = [...experiences];
-    updated[expIndex] = { ...updated[expIndex], description: [...updated[expIndex].description, suggestion.point] };
-    onChange(updated);
-    
+    addBullet('work_experience', expIndex, suggestion.point);
+
     // Remove the suggestion after approval
     setAiSuggestions(prev => ({
       ...prev,
@@ -341,11 +339,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
       }));
 
       // Update the experience with the improved version
-      const updated = [...experiences];
-      const newDesc = [...updated[expIndex].description];
-      newDesc[pointIndex] = improvedPoint;
-      updated[expIndex] = { ...updated[expIndex], description: newDesc };
-      onChange(updated);
+      updateBullet('work_experience', expIndex, pointIndex, improvedPoint);
     } catch (error: Error | unknown) {
       if (error instanceof Error && (
           error.message.toLowerCase().includes('api key') || 
@@ -375,12 +369,8 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
   const undoImprovement = (expIndex: number, pointIndex: number) => {
     const improvedPoint = improvedPoints[expIndex]?.[pointIndex];
     if (improvedPoint) {
-      const updated = [...experiences];
-      const newDesc = [...updated[expIndex].description];
-      newDesc[pointIndex] = improvedPoint.original;
-      updated[expIndex] = { ...updated[expIndex], description: newDesc };
-      onChange(updated);
-      
+      updateBullet('work_experience', expIndex, pointIndex, improvedPoint.original);
+
       // Remove the improvement from state
       setImprovedPoints(prev => {
         const newState = { ...prev };
@@ -546,13 +536,12 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                       <div key={descIndex} className="flex gap-1 items-start group/item">
                         <div className="flex-1">
                           <Tiptap
-                            content={desc} 
+                            content={desc}
                             onChange={(newContent) => {
-                              const updated = [...experiences];
-                              const newDesc = [...updated[index].description];
-                              newDesc[descIndex] = newContent;
-                              updated[index] = { ...updated[index], description: newDesc };
-                              onChange(updated);
+                              // Granular update against the latest store state — does NOT
+                              // rebuild the array from a captured snapshot, so points added
+                              // elsewhere are never clobbered.
+                              updateBullet('work_experience', index, descIndex, newContent);
 
                               if (improvedPoints[index]?.[descIndex]) {
                                 setImprovedPoints(prev => {
@@ -669,11 +658,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => {
-                                  const updated = [...experiences];
-                                  updated[index] = { ...updated[index], description: updated[index].description.filter((_, i) => i !== descIndex) };
-                                  onChange(updated);
-                                }}
+                                onClick={() => removeBullet('work_experience', index, descIndex)}
                                 className="p-0 group-hover/item:opacity-100 text-gray-400 hover:text-red-500 transition-all duration-300"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -757,11 +742,7 @@ export const WorkExperienceForm = memo(function WorkExperienceFormComponent({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const updated = [...experiences];
-                        updated[index] = { ...updated[index], description: [...updated[index].description, ""] };
-                        onChange(updated);
-                      }}
+                      onClick={() => addBullet('work_experience', index)}
                       className={cn(
                         "flex-1 text-cyan-600 hover:text-cyan-700 transition-colors text-[10px] sm:text-xs",
                         "border-cyan-200 hover:border-cyan-300 hover:bg-cyan-50/50"

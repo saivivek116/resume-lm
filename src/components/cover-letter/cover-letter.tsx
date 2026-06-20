@@ -2,7 +2,7 @@ import CoverLetterEditor from "./cover-letter-editor";
 import { useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useResumeContext } from '@/components/resume/editor/resume-editor-context';
+import { useResumeEditorStore } from '@/components/resume/editor/store/resume-editor-store-provider';
 
 
 interface CoverLetterProps {
@@ -11,34 +11,28 @@ interface CoverLetterProps {
 }
 
 export default function CoverLetter({ containerWidth }: CoverLetterProps) {
-  const { state, dispatch } = useResumeContext();
+  const coverLetter = useResumeEditorStore((s) => s.resume.cover_letter);
+  const hasCoverLetter = useResumeEditorStore((s) => s.resume.has_cover_letter);
+  const updateField = useResumeEditorStore((s) => s.updateField);
 
   const handleContentChange = useCallback((data: Record<string, unknown>) => {
     const coverLetterData: import('@/lib/types').CoverLetterData = {
-      ...state.resume.cover_letter,
+      ...coverLetter,
       content: data.content as string,
       lastUpdated: new Date().toISOString(),
     };
-    dispatch({
-      type: 'UPDATE_FIELD',
-      field: 'cover_letter',
-      value: coverLetterData
-    });
-  }, [dispatch, state.resume.cover_letter]);
+    updateField('cover_letter', coverLetterData);
+  }, [updateField, coverLetter]);
 
 
-  if (!state.resume.has_cover_letter) {
+  if (!hasCoverLetter) {
     return (
       <div className="space-y-4">
         <Button
           variant="outline"
           size="sm"
           className="w-full border-emerald-600/50 text-emerald-700 hover:bg-emerald-50"
-          onClick={() => dispatch({
-            type: 'UPDATE_FIELD',
-            field: 'has_cover_letter',
-            value: true
-          })}
+          onClick={() => updateField('has_cover_letter', true)}
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Cover Letter
@@ -52,7 +46,7 @@ export default function CoverLetter({ containerWidth }: CoverLetterProps) {
       {/* Interactive editor */}
       <div className="[&_.print-hidden]:hidden">
         <CoverLetterEditor
-          initialData={{ content: state.resume.cover_letter?.content || '' }}
+          initialData={{ content: coverLetter?.content || '' }}
           onChange={handleContentChange}
           containerWidth={containerWidth}
         />
