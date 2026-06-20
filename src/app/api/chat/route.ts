@@ -97,29 +97,36 @@ export async function POST(req: Request) {
       1. For work experience improvements:
          - Use 'suggest_work_experience_improvement' with 'index' and 'improved_experience' fields
          - Always include company, position, date, and description
-      
+
       2. For project improvements:
          - Use 'suggest_project_improvement' with 'index' and 'improved_project' fields
          - Always include name and description
-      
+
       3. For skill improvements:
          - Use 'suggest_skill_improvement' with 'index' and 'improved_skill' fields
          - Only use for adding new or removing existing skills
-      
+
       4. For education improvements:
          - Use 'suggest_education_improvement' with 'index' and 'improved_education' fields
          - Always include school, degree, field, and date
-      
-      5. For viewing resume sections:
-         - Use 'getResume' with 'sections' array
-         - Valid sections: 'all', 'personal_info', 'work_experience', 'education', 'skills', 'projects'
+
+      5. For professional summary improvements:
+         - Use 'suggest_professional_summary_improvement' with the 'improved_summary' field
+         - Only when the user explicitly asks to change/write/improve the summary
+         - Keep it a single plain-text paragraph (no markdown/bullets), 3-4 sentences, ~60-90 words
 
       6. For multiple section updates:
          - Use 'modifyWholeResume' when changing multiple sections at once
 
-      Aim to use a maximum of 5 tools in one go, then confirm with the user if they would like you to continue.
+      IMPORTANT BEHAVIOR:
+      - The user's full resume is provided below — never call a tool just to read it.
+      - When improving multiple items (e.g. several work experiences or bullet points),
+        emit all of the relevant suggestion tool calls together in a single response.
+      - Do NOT restate the contents of a suggestion in prose; the UI already renders each
+        suggestion as an interactive card. After proposing changes, stop and let the user review.
+
       The target role is ${target_role}. The job is ${job ? JSON.stringify(job) : 'No job specified'}.
-      Current resume summary: ${resume ? `${resume.first_name} ${resume.last_name} - ${resume.target_role}` : 'No resume data'}.
+      Current resume (JSON): ${resume ? JSON.stringify(resume) : 'No resume data'}.
       `;
 
     // Build and send the AI call.
@@ -129,7 +136,8 @@ export async function POST(req: Request) {
       ...(providerOptions ? { providerOptions } : {}),
       system: systemPrompt,
       messages,
-      maxSteps: 5,
+      // Note: continuation/step-limiting is driven client-side by useChat's `maxSteps`
+      // because these tools have no server-side `execute`. A server `maxSteps` here is a no-op.
       tools,
       experimental_transform: smoothStream({
         delayInMs: 20, // optional: defaults to 10ms

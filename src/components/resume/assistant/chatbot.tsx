@@ -10,7 +10,7 @@ import { Message } from 'ai';
 import { cn, withBasePath } from '@/lib/utils';
 import { ToolInvocation } from 'ai';
 import { MemoizedMarkdown } from '@/components/ui/memoized-markdown';
-import { Suggestion } from './suggestions';
+import { Suggestion, applyBulletOperations } from './suggestions';
 import { SuggestionSkeleton } from './suggestion-skeleton';
 import ChatInput from './chat-input';
 import { LoadingDots } from '@/components/ui/loading-dots';
@@ -84,7 +84,7 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
     customPrompts: Object.keys(customPrompts).length > 0 ? customPrompts : undefined,
   };
   
-  const { messages, error, append, isLoading, addToolResult, stop, setMessages } = useChat({
+  const { messages, error, append, isLoading, stop, setMessages } = useChat({
     api: withBasePath('/api/chat'),
     body: {
       target_role: resume.target_role,
@@ -102,40 +102,6 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
     },
     async onToolCall({ toolCall }) {
       // setIsStreaming(false);
-      
-      if (toolCall.toolName === 'getResume') {
-        const params = toolCall.args as { sections: string[] };
-        
-        const personalInfo = {
-          first_name: resume.first_name,
-          last_name: resume.last_name,
-          email: resume.email,
-          phone_number: resume.phone_number,
-          location: resume.location,
-          website: resume.website,
-          linkedin_url: resume.linkedin_url,
-          github_url: resume.github_url,
-        };
-
-        const sectionMap = {
-          personal_info: personalInfo,
-          work_experience: resume.work_experience,
-          education: resume.education,
-          skills: resume.skills,
-          projects: resume.projects,
-        };
-
-        const result = params.sections.includes('all')
-          ? { ...sectionMap, target_role: resume.target_role }
-          : params.sections.reduce((acc, section) => ({
-              ...acc,
-              [section]: sectionMap[section as keyof typeof sectionMap]
-            }), {});
-        
-        addToolResult({ toolCallId: toolCall.toolCallId, result });
-        console.log('Tool call READ RESUME result:', result);
-        return result;
-      }
 
       if (toolCall.toolName === 'suggest_work_experience_improvement') {
         return toolCall.args;
@@ -150,6 +116,10 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
       }
 
       if (toolCall.toolName === 'suggest_education_improvement') {
+        return toolCall.args;
+      }
+
+      if (toolCall.toolName === 'suggest_professional_summary_improvement') {
         return toolCall.args;
       }
 
@@ -198,7 +168,6 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
 
         // Add a simple, serializable result for the tool call
         const result = { success: true };
-        addToolResult({ toolCallId: toolCall.toolCallId, result });
         return result;
       }
     },
@@ -467,21 +436,17 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                         {/* Tool Invocations as Separate Bubbles */}
                         {m.toolInvocations?.map((toolInvocation: ToolInvocation) => {
                           const { toolName, toolCallId, state, args } = toolInvocation;
+                          // TEMP: validate AI only emits changed bullets. Remove after testing.
+                          if (state === 'result' && toolName === 'suggest_work_experience_improvement') {
+                            console.log('[work-exp tool args]', JSON.stringify(args, null, 2));
+                          }
                           switch (state) {
                             case 'partial-call':
                             case 'call':
                               return (
                                 <div key={toolCallId} className="mt-2 max-w-[90%]">
                                   <div className="flex justify-start max-w-[90%]">
-                                    {toolName === 'getResume' ? (
-                                      <div className={cn(
-                                        "rounded-2xl px-4 py-2 max-w-[90%] text-sm",
-                                        "bg-white/90 border border-purple-200/60",
-                                        "shadow-sm backdrop-blur-sm"
-                                      )}>
-                                        Reading Resume...
-                                      </div>
-                                    ) : toolName === 'modifyWholeResume' ? (
+                                    {toolName === 'modifyWholeResume' ? (
                                       <div className={cn(
                                         "w-full rounded-2xl px-4 py-2",
                                         "bg-white/90 border border-purple-200/60",
@@ -500,13 +465,55 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                               );
 
                             case 'result':
+                              // Professional summary is a single string, not an indexed
+                              // array, so it needs its own render branch.
+                              if (toolName === 'suggest_professional_summary_improvement') {
+                                return (
+                                  <div key={toolCallId} className="mt-2 w-[90%]">
+                                    <Suggestion
+                                      type="summary"
+                                      content={args.improved_summary}
+                                      currentContent={resume.professional_summary ?? null}
+                                      onAccept={() => onResumeChange('professional_summary', args.improved_summary)}
+                                      onReject={() => {}}
+                                    />
+                                  </div>
+                                );
+                              }
+
+                              // Work experience uses a sparse bullet-operations
+                              // payload rather than a full object, so it gets its
+                              // own render/accept branch.
+                              if (toolName === 'suggest_work_experience_improvement') {
+                                const currentWork = resume.work_experience[args.index];
+                                if (!currentWork) return null;
+                                return (
+                                  <div key={toolCallId} className="mt-2 w-[90%]">
+                                    <Suggestion
+                                      type="work_experience"
+                                      currentContent={currentWork}
+                                      operations={args.bullet_operations}
+                                      technologies={args.technologies}
+                                      onAccept={() => {
+                                        const updated = {
+                                          ...currentWork,
+                                          description: applyBulletOperations(currentWork.description, args.bullet_operations),
+                                          technologies: args.technologies ?? currentWork.technologies,
+                                        };
+                                        onResumeChange('work_experience',
+                                          resume.work_experience.map((item: WorkExperience, i: number) =>
+                                            i === args.index ? updated : item
+                                          )
+                                        );
+                                      }}
+                                      onReject={() => {}}
+                                    />
+                                  </div>
+                                );
+                              }
+
                               // Map tool names to resume sections and handle suggestions
                               const toolConfig = {
-                                suggest_work_experience_improvement: {
-                                  type: 'work_experience' as const,
-                                  field: 'work_experience',
-                                  content: 'improved_experience',
-                                },
                                 suggest_project_improvement: {
                                   type: 'project' as const,
                                   field: 'projects',
@@ -531,23 +538,6 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                               const config = toolConfig[toolName as keyof typeof toolConfig];
 
                               if (!config) return null;
-
-                              // Handle specific tool results
-                              if (toolName === 'getResume') {
-                                return (
-                                  <div key={toolCallId} className="mt-2 w-[90%]">
-                                    <div className="flex justify-start">
-                                      <div className={cn(
-                                        "rounded-2xl px-4 py-2 max-w-[90%] text-sm",
-                                        "bg-white/90 border border-purple-200/60",
-                                        "shadow-sm backdrop-blur-sm"
-                                      )}>
-                                        <p>Read Resume ({args.sections?.join(', ') || 'all'}) ✅</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
 
                               if (config.type === 'whole_resume') {
                                 return (
