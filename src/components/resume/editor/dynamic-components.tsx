@@ -2,7 +2,7 @@ import dynamic from 'next/dynamic';
 import React from 'react';
 import type { ComponentType } from 'react';
 import { LoadingFallback } from './shared/LoadingFallback';
-import type { WorkExperience, Education, Skill, Project, DocumentSettings, Certification, ResumeSectionId, Profile, Resume } from '@/lib/types';
+import type { Education, Skill, DocumentSettings, Certification, ResumeSectionId, Profile, Resume } from '@/lib/types';
 
 interface WorkExperienceFormProps {
   profile: Profile;
