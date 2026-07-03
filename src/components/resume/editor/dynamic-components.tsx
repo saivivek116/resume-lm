@@ -5,16 +5,12 @@ import { LoadingFallback } from './shared/LoadingFallback';
 import type { WorkExperience, Education, Skill, Project, DocumentSettings, Certification, ResumeSectionId, Profile, Resume } from '@/lib/types';
 
 interface WorkExperienceFormProps {
-  experiences: WorkExperience[];
-  onChange: (experiences: WorkExperience[]) => void;
-  profile: { work_experience: WorkExperience[] };
+  profile: Profile;
   targetRole?: string;
 }
 
 interface ProjectsFormProps {
-  projects: Project[];
-  onChange: (projects: Project[]) => void;
-  profile: { projects: Project[] };
+  profile: Profile;
 }
 
 interface EducationFormProps {

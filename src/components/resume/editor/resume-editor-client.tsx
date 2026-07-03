@@ -1,16 +1,16 @@
 'use client';
 
-import React from 'react';
 import { Resume, Profile, Job } from "@/lib/types";
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { ResumeContext, resumeReducer } from './resume-editor-context';
 import { createClient } from "@/utils/supabase/client";
 import { EditorLayout } from "./layout/EditorLayout";
 import { EditorPanel } from './panels/editor-panel';
 import { PreviewPanel } from './panels/preview-panel';
 import { UnsavedChangesDialog } from './dialogs/unsaved-changes-dialog';
+import { ResumeStoreProvider, useResumeEditorStore } from './store/resume-editor-store-provider';
+import { useAutoSave } from './store/use-auto-save';
 
 interface ResumeEditorClientProps {
   initialResume: Resume;
@@ -23,29 +23,43 @@ export function ResumeEditorClient({
   profile,
   initialJob,
 }: ResumeEditorClientProps) {
+  return (
+    <ResumeStoreProvider initialResume={initialResume}>
+      <ResumeEditorContent profile={profile} initialJob={initialJob} />
+    </ResumeStoreProvider>
+  );
+}
+
+function ResumeEditorContent({
+  profile,
+  initialJob,
+}: {
+  profile: Profile;
+  initialJob?: Job | null;
+}) {
   const router = useRouter();
-  const [state, dispatch] = useReducer(resumeReducer, {
-    resume: initialResume,
-    isSaving: false,
-    isDeleting: false,
-    hasUnsavedChanges: false
-  });
+  const resume = useResumeEditorStore((s) => s.resume);
+  const hasUnsavedChanges = useResumeEditorStore((s) => s.hasUnsavedChanges);
+  const updateField = useResumeEditorStore((s) => s.updateField);
+
+  // Debounced auto-save: persists settled edits so points are never lost.
+  useAutoSave();
 
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
-  const debouncedResume = useDebouncedValue(state.resume, 100);
+  const debouncedResume = useDebouncedValue(resume, 100);
   const [job, setJob] = useState<Job | null>(initialJob ?? null);
   const [isLoadingJob, setIsLoadingJob] = useState(false);
 
   // Single job fetching effect
   useEffect(() => {
-    if (!state.resume.job_id) {
+    if (!resume.job_id) {
       setJob(null);
       setIsLoadingJob(false);
       return;
     }
 
-    if (job?.id === state.resume.job_id) {
+    if (job?.id === resume.job_id) {
       return;
     }
 
@@ -58,7 +72,7 @@ export function ResumeEditorClient({
         const { data: jobData, error } = await supabase
           .from('jobs')
           .select('*')
-          .eq('id', state.resume.job_id)
+          .eq('id', resume.job_id)
           .single();
 
         if (isCancelled) {
@@ -88,32 +102,12 @@ export function ResumeEditorClient({
     return () => {
       isCancelled = true;
     };
-  }, [state.resume.job_id, job?.id]);
-
-  const updateField = <K extends keyof Resume>(field: K, value: Resume[K]) => {
-    
-    if (field === 'document_settings') {
-      // Ensure we're passing a valid DocumentSettings object
-      if (typeof value === 'object' && value !== null) {
-        dispatch({ type: 'UPDATE_FIELD', field, value });
-      } else {
-        console.error('Invalid document settings:', value);
-      }
-    } else {
-      dispatch({ type: 'UPDATE_FIELD', field, value });
-    }
-  };
-
-  // Track changes
-  useEffect(() => {
-    const hasChanges = JSON.stringify(state.resume) !== JSON.stringify(initialResume);
-    dispatch({ type: 'SET_HAS_CHANGES', value: hasChanges });
-  }, [state.resume, initialResume]);
+  }, [resume.job_id, job?.id]);
 
   // Handle beforeunload event
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (state.hasUnsavedChanges) {
+      if (hasUnsavedChanges) {
         e.preventDefault();
         e.returnValue = '';
         return '';
@@ -122,14 +116,12 @@ export function ResumeEditorClient({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [state.hasUnsavedChanges]);
-
-
+  }, [hasUnsavedChanges]);
 
   // Editor Panel
   const editorPanel = (
     <EditorPanel
-      resume={state.resume}
+      resume={resume}
       profile={profile}
       job={job}
       isLoadingJob={isLoadingJob}
@@ -147,12 +139,11 @@ export function ResumeEditorClient({
   );
 
   return (
-    <ResumeContext.Provider value={{ state, dispatch }}>
+    <>
       {/* Unsaved Changes Dialog */}
       <UnsavedChangesDialog
         isOpen={showExitDialog}
         onOpenChange={setShowExitDialog}
-        // pendingNavigation={pendingNavigation}
         onConfirm={() => {
           if (pendingNavigation) {
             router.push(pendingNavigation);
@@ -164,10 +155,10 @@ export function ResumeEditorClient({
 
       {/* Editor Layout */}
       <EditorLayout
-        isBaseResume={state.resume.is_base_resume}
+        isBaseResume={resume.is_base_resume}
         editorPanel={editorPanel}
         previewPanel={previewPanel}
       />
-    </ResumeContext.Provider>
+    </>
   );
-} 
+}

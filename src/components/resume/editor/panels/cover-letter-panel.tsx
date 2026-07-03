@@ -9,7 +9,7 @@ import { readStreamableValue } from 'ai/rsc';
 import type { AIConfig } from "@/utils/ai-tools";
 import { AIImprovementPrompt } from "../../shared/ai-improvement-prompt";
 import { generate } from "@/utils/actions/cover-letter/actions";
-import { useResumeContext } from "../resume-editor-context";
+import { useResumeEditorStore } from "../store/resume-editor-store-provider";
 import { ApiErrorDialog } from "@/components/ui/api-error-dialog";
 import { CreateTailoredResumeDialog } from "@/components/resume/management/dialogs/create-tailored-resume-dialog";
 import { CoverLetterSettingsForm } from "@/components/cover-letter/cover-letter-settings-form";
@@ -29,20 +29,12 @@ export function CoverLetterPanel({
   profile,
   aiConfig,
 }: CoverLetterPanelProps) {
-  const { dispatch } = useResumeContext();
+  const updateField = useResumeEditorStore((s) => s.updateField);
   const { defaultModel } = useDefaultModel();
   const [isGenerating, setIsGenerating] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
-
-  const updateField = (field: keyof Resume, value: Resume[keyof Resume]) => {
-    dispatch({ 
-      type: 'UPDATE_FIELD',
-      field,
-      value
-    });
-  };
 
   const generateCoverLetter = async () => {
     if (!job) return;
@@ -234,11 +226,7 @@ export function CoverLetterPanel({
                   lastUpdated: resume.cover_letter?.lastUpdated,
                   document_settings: newSettings,
                 };
-                dispatch({
-                  type: 'UPDATE_FIELD',
-                  field: 'cover_letter',
-                  value: updated,
-                });
+                updateField('cover_letter', updated);
               }}
             />
           </div>
@@ -260,7 +248,7 @@ export function CoverLetterPanel({
                   document_settings:
                     profile?.cover_letter_document_settings ?? DEFAULT_COVER_LETTER_SETTINGS,
                 };
-                dispatch({ type: 'UPDATE_FIELD', field: 'cover_letter', value: seeded });
+                updateField('cover_letter', seeded);
               }
               updateField('has_cover_letter', true);
             }}

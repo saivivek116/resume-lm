@@ -23,6 +23,7 @@ import Tiptap from "@/components/ui/tiptap";
 import { AIImprovementPrompt } from "../../shared/ai-improvement-prompt";
 import { AIGenerationSettingsTooltip } from "../components/ai-generation-tooltip";
 import { ApiErrorDialog } from "@/components/ui/api-error-dialog";
+import { useResumeEditorStore } from "../store/resume-editor-store-provider";
 
 interface AISuggestion {
   id: string;
@@ -39,26 +40,30 @@ interface ImprovementConfig {
 }
 
 interface ProjectsFormProps {
-  projects: Project[];
-  onChange: (projects: Project[]) => void;
   profile: Profile;
 }
 
+// Resume data now comes from the Zustand store, so only profile identity is compared.
 function areProjectsPropsEqual(
   prevProps: ProjectsFormProps,
   nextProps: ProjectsFormProps
 ) {
-  return (
-    JSON.stringify(prevProps.projects) === JSON.stringify(nextProps.projects) &&
-    prevProps.profile.id === nextProps.profile.id
-  );
+  return prevProps.profile.id === nextProps.profile.id;
 }
 
 export const ProjectsForm = memo(function ProjectsFormComponent({
-  projects,
-  onChange,
   profile
 }: ProjectsFormProps) {
+  // Resume data + mutations come from the store. Granular bullet actions mutate the
+  // LATEST state, eliminating the stale-closure bug that dropped freshly added points.
+  const projects = useResumeEditorStore((s) => s.resume.projects);
+  const updateField = useResumeEditorStore((s) => s.updateField);
+  const addBullet = useResumeEditorStore((s) => s.addBullet);
+  const updateBullet = useResumeEditorStore((s) => s.updateBullet);
+  const removeBullet = useResumeEditorStore((s) => s.removeBullet);
+  const moveBulletAction = useResumeEditorStore((s) => s.moveBullet);
+
+  const onChange = (updated: Project[]) => updateField('projects', updated);
   const [aiSuggestions, setAiSuggestions] = useState<{ [key: number]: AISuggestion[] }>({});
   const [loadingAI, setLoadingAI] = useState<{ [key: number]: boolean }>({});
   const [loadingPointAI, setLoadingPointAI] = useState<{ [key: number]: { [key: number]: boolean } }>({});
@@ -153,13 +158,6 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
     const newBulletIndex = bulletIndex + direction;
     if (newBulletIndex < 0 || newBulletIndex >= project.description.length) return;
 
-    const newDesc = [...project.description];
-    const [item] = newDesc.splice(bulletIndex, 1);
-    newDesc.splice(newBulletIndex, 0, item);
-
-    const updated = [...projects];
-    updated[projIndex] = { ...project, description: newDesc };
-
     const remapInner = <T,>(outer: Record<number, Record<number, T>>) => {
       if (!outer[projIndex]) return outer;
       return { ...outer, [projIndex]: reorderIndexMap(outer[projIndex], bulletIndex, newBulletIndex) };
@@ -168,7 +166,7 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
     setLoadingPointAI((prev) => remapInner(prev));
     setImprovementConfig((prev) => remapInner(prev));
 
-    onChange(updated);
+    moveBulletAction('projects', projIndex, bulletIndex, direction);
   };
 
   const sortBulletsByAI = async (projIndex: number) => {
@@ -284,10 +282,8 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
   };
 
   const approveSuggestion = (projectIndex: number, suggestion: AISuggestion) => {
-    const updated = [...projects];
-    updated[projectIndex] = { ...updated[projectIndex], description: [...updated[projectIndex].description, suggestion.point] };
-    onChange(updated);
-    
+    addBullet('projects', projectIndex, suggestion.point);
+
     // Remove the suggestion after approval
     setAiSuggestions(prev => ({
       ...prev,
@@ -331,11 +327,7 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
         }
       }));
 
-      const updated = [...projects];
-      const newDesc = [...updated[projectIndex].description];
-      newDesc[pointIndex] = improvedPoint;
-      updated[projectIndex] = { ...updated[projectIndex], description: newDesc };
-      onChange(updated);
+      updateBullet('projects', projectIndex, pointIndex, improvedPoint);
     } catch (error: unknown) {
       if (error instanceof Error && (
         error.message.toLowerCase().includes('api key') || 
@@ -365,12 +357,8 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
   const undoImprovement = (projectIndex: number, pointIndex: number) => {
     const improvedPoint = improvedPoints[projectIndex]?.[pointIndex];
     if (improvedPoint) {
-      const updated = [...projects];
-      const newDesc = [...updated[projectIndex].description];
-      newDesc[pointIndex] = improvedPoint.original;
-      updated[projectIndex] = { ...updated[projectIndex], description: newDesc };
-      onChange(updated);
-      
+      updateBullet('projects', projectIndex, pointIndex, improvedPoint.original);
+
       // Remove the improvement from state
       setImprovedPoints(prev => {
         const newState = { ...prev };
@@ -574,13 +562,12 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
                       <div key={descIndex} className="flex gap-1 items-start group/item">
                         <div className="flex-1">
                           <Tiptap
-                            content={desc} 
+                            content={desc}
                             onChange={(newContent) => {
-                              const updated = [...projects];
-                              const newDesc = [...updated[index].description];
-                              newDesc[descIndex] = newContent;
-                              updated[index] = { ...updated[index], description: newDesc };
-                              onChange(updated);
+                              // Granular update against the latest store state — does NOT
+                              // rebuild the array from a captured snapshot, so points added
+                              // elsewhere are never clobbered.
+                              updateBullet('projects', index, descIndex, newContent);
 
                               if (improvedPoints[index]?.[descIndex]) {
                                 setImprovedPoints(prev => {
@@ -697,11 +684,7 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => {
-                                  const updated = [...projects];
-                                  updated[index] = { ...updated[index], description: updated[index].description.filter((_, i) => i !== descIndex) };
-                                  onChange(updated);
-                                }}
+                                onClick={() => removeBullet('projects', index, descIndex)}
                                 className="p-0 group-hover/item:opacity-100 text-gray-400 hover:text-red-500 transition-all duration-300"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -784,11 +767,7 @@ export const ProjectsForm = memo(function ProjectsFormComponent({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const updated = [...projects];
-                        updated[index] = { ...updated[index], description: [...updated[index].description, ""] };
-                        onChange(updated);
-                      }}
+                      onClick={() => addBullet('projects', index)}
                       className={cn(
                         "flex-1 text-violet-600 hover:text-violet-700 transition-colors text-[10px] sm:text-xs",
                         "border-violet-200 hover:border-violet-300 hover:bg-violet-50/50"

@@ -1,35 +1,23 @@
 import { tool as createTool } from 'ai';
 import { z } from 'zod';
 
-export const getResumeTool = createTool({
-  description: 'Get the user Resume. Can request specific sections or "all" for the entire resume.',
-  parameters: z.object({
-    sections: z.union([
-      z.string(),
-      z.array(z.enum([
-        'all',
-        'personal_info',
-        'work_experience',
-        'education',
-        'skills',
-        'projects',
-      ]))
-    ]).transform(val => Array.isArray(val) ? val : [val]),
-  }),
-});
-
 export const suggestWorkExperienceTool = createTool({
-  description: 'Suggest improvements for a specific work experience entry',
+  description:
+    'Suggest changes to the bullet points of ONE work experience entry. Emit ONLY the bullets you are changing — never repeat unchanged bullets. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.',
   parameters: z.object({
-    index: z.number().describe('Index of the work experience entry to improve'),
-    improved_experience: z.object({
-      date: z.string(),
-      company: z.string(),
-      location: z.string().nullable(),
-      position: z.string(),
-      description: z.array(z.string()),
-      technologies: z.array(z.string()),
-    }).describe('Improved version of the work experience entry. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.'),
+    index: z.number().describe('Index of the work experience entry to edit'),
+    bullet_operations: z.array(z.object({
+      operation: z.enum(['replace', 'add', 'remove']),
+      index: z.number().nullable().describe(
+        'For replace/remove: the 0-based index of the existing bullet in the CURRENT description array. null for add.'
+      ),
+      text: z.string().nullable().describe(
+        'For replace/add: the new bullet text (use **keyword** for emphasis). null for remove.'
+      ),
+    })).describe('Sparse list of bullet changes. Include only bullets that change.'),
+    technologies: z.array(z.string()).nullable().describe(
+      'Provide the full technologies list ONLY when it changes; otherwise null.'
+    ),
   }),
 });
 
@@ -72,6 +60,15 @@ export const suggestEducationTool = createTool({
       gpa: z.string().nullable(),
       achievements: z.array(z.string()),
     }).describe('Improved version of the education entry. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.'),
+  }),
+});
+
+export const suggestProfessionalSummaryTool = createTool({
+  description: 'Suggest an improved professional summary based on the user\'s request. Only use this when the user explicitly asks to change, write, or improve their professional summary.',
+  parameters: z.object({
+    improved_summary: z.string().describe(
+      'Improved professional summary as a single plain-text paragraph (no markdown, no bullet points, no headings, no bold). 3 to 4 sentences, target 60 to 90 words.'
+    ),
   }),
 });
 
@@ -126,11 +123,11 @@ export const modifyWholeResumeTool = createTool({
 
 // Export all tools in a single object for convenience
 export const tools = {
-  getResume: getResumeTool,
   suggest_work_experience_improvement: suggestWorkExperienceTool,
   suggest_project_improvement: suggestProjectTool,
   suggest_skill_improvement: suggestSkillTool,
   suggest_education_improvement: suggestEducationTool,
+  suggest_professional_summary_improvement: suggestProfessionalSummaryTool,
   modifyWholeResume: modifyWholeResumeTool,
 
 }; 

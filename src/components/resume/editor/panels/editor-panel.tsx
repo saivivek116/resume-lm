@@ -95,8 +95,6 @@ export function EditorPanel({
                   </div>
                 }>
                   <WorkExperienceForm
-                    experiences={resume.work_experience}
-                    onChange={(experiences) => onResumeChange('work_experience', experiences)}
                     profile={profile}
                     targetRole={resume.target_role}
                   />
@@ -112,8 +110,6 @@ export function EditorPanel({
                   </div>
                 }>
                   <ProjectsForm
-                    projects={resume.projects}
-                    onChange={(projects) => onResumeChange('projects', projects)}
                     profile={profile}
                   />
                 </Suspense>

@@ -268,7 +268,7 @@ const FeatureHighlights = () => {
       >
         <div className="max-w-3xl mx-auto px-6 py-12 rounded-2xl bg-gradient-to-br from-white/50 to-white/30 backdrop-blur-lg border border-white/40 shadow-xl">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="bg-blue bg-clip-text text-transparent">
               Ready to land your dream job?
             </span>
           </h2>
