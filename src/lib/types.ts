@@ -82,6 +82,61 @@ export interface ApplicationQuestion {
   createdAt: string;
 }
 
+export type InterviewQuestionCategory =
+  | 'screening'
+  | 'behavioral'
+  | 'technical'
+  | 'system_design'
+  | 'dsa'
+  | 'culture_fit';
+
+export interface InterviewStar {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+}
+
+export interface InterviewQuestion {
+  id: string;
+  category: InterviewQuestionCategory;
+  question: string;
+  star: InterviewStar;
+  whatYouLearned: string;
+  tips?: string[];
+}
+
+export interface CompanyProfile {
+  companyName: string;
+  careersUrl: string | null;
+  summary: string;
+}
+
+export interface CompanyProductService {
+  name: string;
+  description: string;
+}
+
+export interface CompanyResearch {
+  websiteUrl: string | null;
+  cultureAndValues: string;
+  productsAndServices: CompanyProductService[];
+}
+
+// Web-sourced interview experiences (real questions/experiences pulled from
+// Glassdoor, Reddit, Blind, LeetCode Discuss, etc. via Tavily). One unified
+// item shape: questions and experience narratives all live in `content`.
+export interface InterviewExperienceItem {
+  source: string; // site name, e.g. "Glassdoor", "Reddit", "LeetCode"
+  sourceUrl: string; // link to the original post
+  roleContext?: string; // e.g. "Backend Engineer, onsite, 2024"
+  content: string; // the interview question(s) and/or experience narrative
+}
+
+export interface InterviewExperiencesResult {
+  items: InterviewExperienceItem[];
+}
+
 export interface TheirStackMetadata {
   seniority: string | null;
   company_domain: string | null;
@@ -127,6 +182,14 @@ export interface SectionConfig {
   visible: boolean;
   max_items?: number | null;
   style?: 'grouped' | 'list' | 'grid';
+  title?: string;
+}
+
+export function getSectionTitle(
+  configs: Resume['section_configs'] | undefined,
+  id: ResumeSectionId
+): string {
+  return configs?.[id]?.title?.trim() || SECTION_LABELS[id];
 }
 
 export interface Resume {
@@ -155,7 +218,7 @@ export interface Resume {
   document_settings?: DocumentSettings;
   section_order?: ResumeSectionId[];
   section_configs?: {
-    [key: string]: { visible: boolean };
+    [key: string]: { visible: boolean; title?: string };
   };
   has_cover_letter: boolean;
   cover_letter?: CoverLetterData | null;

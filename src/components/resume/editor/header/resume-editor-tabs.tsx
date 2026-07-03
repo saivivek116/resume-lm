@@ -1,18 +1,20 @@
 'use client';
 
-import { User, Briefcase, FolderGit2, GraduationCap, Wrench, LayoutTemplate, Award, MessageSquare } from "lucide-react";
+import { User, Briefcase, FolderGit2, GraduationCap, Wrench, LayoutTemplate, Award, MessageSquare, Mic } from "lucide-react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Resume, getSectionTitle } from "@/lib/types";
 
 interface ResumeEditorTabsProps {
   isTailored: boolean;
+  sectionConfigs?: Resume['section_configs'];
 }
 
-export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
+export function ResumeEditorTabs({ isTailored, sectionConfigs }: ResumeEditorTabsProps) {
   return (
     <>
       {/* Enhanced second row with Resume Score, Cover Letter, and App Questions */}
       <div className="my-2">
-        <TabsList className={`h-full w-full relative bg-white/80 backdrop-blur-xl border border-white/40 rounded-lg overflow-hidden grid gap-0.5 p-0.5 shadow-lg ${isTailored ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <TabsList className={`h-full w-full relative bg-white/80 backdrop-blur-xl border border-white/40 rounded-lg overflow-hidden grid gap-0.5 p-0.5 shadow-lg ${isTailored ? 'grid-cols-4' : 'grid-cols-2'}`}>
 
           {/* Resume Score */}
           <TabsTrigger
@@ -75,6 +77,25 @@ export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
               </span>
             </TabsTrigger>
           )}
+
+          {/* Interview Coach — only for tailored resumes */}
+          {isTailored && (
+            <TabsTrigger
+              value="interview-coach"
+              className="group flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium relative transition-all duration-300
+                data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500/10 data-[state=active]:to-indigo-500/10
+                data-[state=active]:border-blue-500/20 data-[state=active]:shadow-md hover:bg-white/60
+                data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-900"
+            >
+              <div className="p-1 rounded-md bg-blue-100/80 transition-transform duration-300 group-data-[state=active]:scale-105 group-data-[state=active]:bg-blue-100">
+                <Mic className="h-3.5 w-3.5 text-blue-600 transition-colors group-data-[state=inactive]:text-blue-500/70" />
+              </div>
+              <span className="relative text-sm whitespace-nowrap">
+                Interview Coach
+                <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 rounded-full bg-blue-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
+              </span>
+            </TabsTrigger>
+          )}
         </TabsList>
       </div>
 
@@ -108,7 +129,7 @@ export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
             <Briefcase className="h-3.5 w-3.5 text-cyan-600 transition-colors group-data-[state=inactive]:text-cyan-500/70" />
           </div>
           <span className="relative text-xs whitespace-nowrap">
-            Work
+            {getSectionTitle(sectionConfigs, 'work_experience')}
             <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 rounded-full bg-cyan-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
           </span>
         </TabsTrigger>
@@ -125,7 +146,7 @@ export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
             <FolderGit2 className="h-3.5 w-3.5 text-violet-600 transition-colors group-data-[state=inactive]:text-violet-500/70" />
           </div>
           <span className="relative text-xs whitespace-nowrap">
-            Projects
+            {getSectionTitle(sectionConfigs, 'projects')}
             <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 rounded-full bg-violet-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
           </span>
         </TabsTrigger>
@@ -142,7 +163,7 @@ export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
             <GraduationCap className="h-3.5 w-3.5 text-indigo-600 transition-colors group-data-[state=inactive]:text-indigo-500/70" />
           </div>
           <span className="relative text-xs whitespace-nowrap">
-            Education
+            {getSectionTitle(sectionConfigs, 'education')}
             <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 rounded-full bg-indigo-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
           </span>
         </TabsTrigger>
@@ -159,7 +180,7 @@ export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
             <Wrench className="h-3.5 w-3.5 text-rose-600 transition-colors group-data-[state=inactive]:text-rose-500/70" />
           </div>
           <span className="relative text-xs whitespace-nowrap">
-            Skills
+            {getSectionTitle(sectionConfigs, 'skills')}
             <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 rounded-full bg-rose-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
           </span>
         </TabsTrigger>
@@ -176,7 +197,7 @@ export function ResumeEditorTabs({ isTailored }: ResumeEditorTabsProps) {
             <Award className="h-3.5 w-3.5 text-amber-600 transition-colors group-data-[state=inactive]:text-amber-500/70" />
           </div>
           <span className="relative text-xs whitespace-nowrap">
-            Certifications
+            {getSectionTitle(sectionConfigs, 'certifications')}
             <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 rounded-full bg-amber-500 scale-x-0 transition-transform duration-300 group-data-[state=active]:scale-x-100"></div>
           </span>
         </TabsTrigger>
