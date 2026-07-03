@@ -53,6 +53,7 @@ function generateResumeHash(resume: Resume): string {
       certifications: resume.certifications,
     },
     section_order: resume.section_order,
+    section_configs: resume.section_configs,
     settings: resume.document_settings,
   });
 

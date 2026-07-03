@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import {
   DocumentSettings,
   DEFAULT_DOCUMENT_SETTINGS,
@@ -8,6 +9,8 @@ import {
   ResumeSectionId,
   DEFAULT_SECTION_ORDER,
   SECTION_LABELS,
+  Resume,
+  getSectionTitle,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChevronUp, ChevronDown } from "lucide-react"
@@ -23,6 +26,8 @@ interface DocumentSettingsFormProps {
   sectionOrder?: ResumeSectionId[];
   onSectionOrderChange?: (order: ResumeSectionId[]) => void;
   profileSectionOrderDefault?: ResumeSectionId[];
+  sectionConfigs?: Resume['section_configs'];
+  onSectionTitleChange?: (id: ResumeSectionId, title: string) => void;
 }
 
 interface NumberInputProps {
@@ -81,6 +86,8 @@ export function DocumentSettingsForm({
   sectionOrder,
   onSectionOrderChange,
   profileSectionOrderDefault,
+  sectionConfigs,
+  onSectionTitleChange,
 }: DocumentSettingsFormProps) {
 
   const reorderEnabled = !!onSectionOrderChange;
@@ -431,36 +438,59 @@ export function DocumentSettingsForm({
               </p>
 
               <div className="space-y-2 bg-slate-50/50 rounded-lg border border-slate-200/50 p-2">
-                {effectiveOrder.map((id, index) => (
-                  <div
-                    key={id}
-                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200/60 bg-white/70 px-3 py-2"
-                  >
-                    <span className="text-sm font-medium text-slate-700">
-                      {SECTION_LABELS[id]}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => moveSection(index, -1)}
-                        disabled={index === 0}
-                        className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => moveSection(index, 1)}
-                        disabled={index === effectiveOrder.length - 1}
-                        className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
+                {effectiveOrder.map((id, index) => {
+                  const hasCustomTitle = !!sectionConfigs?.[id]?.title?.trim();
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center justify-between gap-2 rounded-md border border-amber-200/60 bg-white/70 px-3 py-2"
+                    >
+                      {onSectionTitleChange ? (
+                        <Input
+                          value={getSectionTitle(sectionConfigs, id)}
+                          placeholder={SECTION_LABELS[id]}
+                          onChange={(e) => onSectionTitleChange(id, e.target.value)}
+                          className="h-7 text-sm font-medium text-slate-700 border-transparent bg-transparent hover:border-amber-200 focus-visible:border-amber-300 focus-visible:ring-amber-200"
+                        />
+                      ) : (
+                        <span className="text-sm font-medium text-slate-700">
+                          {SECTION_LABELS[id]}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        {onSectionTitleChange && hasCustomTitle && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onSectionTitleChange(id, '')}
+                            title="Reset to default label"
+                            className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => moveSection(index, -1)}
+                          disabled={index === 0}
+                          className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => moveSection(index, 1)}
+                          disabled={index === effectiveOrder.length - 1}
+                          className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex flex-col @[400px]:flex-row gap-2">

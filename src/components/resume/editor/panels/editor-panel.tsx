@@ -12,6 +12,7 @@ import { BasicInfoForm } from "../forms/basic-info-form";
 import ChatBot from "../../assistant/chatbot";
 import { CoverLetterPanel } from "./cover-letter-panel";
 import { ApplicationQuestionsPanel } from "./application-questions-panel";
+import { InterviewCoachPanel } from "./interview-coach-panel";
 import {
   WorkExperienceForm,
   EducationForm,
@@ -75,7 +76,7 @@ export function EditorPanel({
 
             {/* Tabs */}  
             <Tabs defaultValue="basic" className="mb-4">
-              <ResumeEditorTabs isTailored={!resume.is_base_resume} />
+              <ResumeEditorTabs isTailored={!resume.is_base_resume} sectionConfigs={resume.section_configs} />
 
               {/* Basic Info Form */}
               <TabsContent value="basic">
@@ -183,6 +184,13 @@ export function EditorPanel({
                     sectionOrder={resume.section_order ?? DEFAULT_SECTION_ORDER}
                     onSectionOrderChange={(order: ResumeSectionId[]) => onResumeChange('section_order', order)}
                     profileSectionOrderDefault={profile.section_order ?? undefined}
+                    sectionConfigs={resume.section_configs}
+                    onSectionTitleChange={(id: ResumeSectionId, title: string) =>
+                      onResumeChange('section_configs', {
+                        ...(resume.section_configs ?? {}),
+                        [id]: { ...(resume.section_configs?.[id] ?? { visible: true }), title: title.trim() || undefined },
+                      })
+                    }
                   />
                 </Suspense>
               </TabsContent>
@@ -214,6 +222,13 @@ export function EditorPanel({
                     questions={applicationQuestions}
                     onQuestionsChange={setApplicationQuestions}
                   />
+                </TabsContent>
+              )}
+
+              {/* Interview Coach */}
+              {!resume.is_base_resume && job && (
+                <TabsContent value="interview-coach">
+                  <InterviewCoachPanel resume={resume} job={job} />
                 </TabsContent>
               )}
             </Tabs>

@@ -2,7 +2,7 @@ import dynamic from 'next/dynamic';
 import React from 'react';
 import type { ComponentType } from 'react';
 import { LoadingFallback } from './shared/LoadingFallback';
-import type { WorkExperience, Education, Skill, Project, DocumentSettings, Certification, ResumeSectionId, Profile } from '@/lib/types';
+import type { WorkExperience, Education, Skill, Project, DocumentSettings, Certification, ResumeSectionId, Profile, Resume } from '@/lib/types';
 
 interface WorkExperienceFormProps {
   experiences: WorkExperience[];
@@ -89,6 +89,8 @@ export const DocumentSettingsForm = dynamic(
     sectionOrder?: ResumeSectionId[];
     onSectionOrderChange?: (order: ResumeSectionId[]) => void;
     profileSectionOrderDefault?: ResumeSectionId[];
+    sectionConfigs?: Resume['section_configs'];
+    onSectionTitleChange?: (id: ResumeSectionId, title: string) => void;
   }>>,
   {
     loading: () => <LoadingFallback lines={1} />,
