@@ -6,17 +6,19 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Download, Copy } from "lucide-react";
+import { Download, FileText, Copy } from "lucide-react";
 
 interface CoverLetterContextMenuProps {
   children: React.ReactNode;
   onDownloadPDF: () => Promise<void>;
+  onDownloadWord: () => Promise<void>;
   onCopyToClipboard: () => Promise<void>;
 }
 
-export function CoverLetterContextMenu({ 
+export function CoverLetterContextMenu({
   children,
   onDownloadPDF,
+  onDownloadWord,
   onCopyToClipboard
 }: CoverLetterContextMenuProps) {
   return (
@@ -31,6 +33,13 @@ export function CoverLetterContextMenu({
         >
           <Download className="w-4 h-4" />
           <span>Download as PDF</span>
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={onDownloadWord}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <FileText className="w-4 h-4" />
+          <span>Download as Word</span>
         </ContextMenuItem>
         <ContextMenuItem
           onClick={onCopyToClipboard}

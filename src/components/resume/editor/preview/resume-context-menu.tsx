@@ -6,11 +6,13 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Download, Copy } from "lucide-react";
+import { Download, FileText, Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Resume, WorkExperience, Education, Project } from "@/lib/types";
 import { pdf } from '@react-pdf/renderer';
 import { ResumePDFDocument } from "../preview/resume-pdf-document";
+import { generateResumeDocx } from "@/lib/docx/resume-docx";
+import { downloadBlob, buildDocFilename } from "@/lib/download-utils";
 
 interface ResumeContextMenuProps {
   children: React.ReactNode;
@@ -21,21 +23,28 @@ export function ResumeContextMenu({ children, resume }: ResumeContextMenuProps) 
   const handleDownloadPDF = async () => {
     try {
       const blob = await pdf(<ResumePDFDocument resume={resume} />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const role = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
-      const company = !resume.is_base_resume && resume.name?.includes(' at ')
-        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
-        : '';
-      link.download = `${resume.first_name}_${resume.last_name}${role}${company}_Resume.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, buildDocFilename(resume, 'Resume', 'pdf'));
       toast({
         title: "Download started",
         description: "Your resume PDF is being downloaded.",
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Download failed",
+        description: "Unable to download your resume. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      const blob = await generateResumeDocx(resume);
+      downloadBlob(blob, buildDocFilename(resume, 'Resume', 'docx'));
+      toast({
+        title: "Download started",
+        description: "Your resume Word document is being downloaded.",
       });
     } catch (error) {
       console.error(error);
@@ -171,6 +180,13 @@ export function ResumeContextMenu({ children, resume }: ResumeContextMenuProps) 
         >
           <Download className="w-4 h-4" />
           <span>Download as PDF</span>
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={handleDownloadWord}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <FileText className="w-4 h-4" />
+          <span>Download as Word</span>
         </ContextMenuItem>
         <ContextMenuItem
           onClick={handleCopyToClipboard}
