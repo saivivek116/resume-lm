@@ -8,6 +8,9 @@ import { pdf } from '@react-pdf/renderer';
 import { TextImport } from "../../text-import";
 import { ResumePDFDocument } from "../preview/resume-pdf-document";
 import { CoverLetterPDFDocument } from "@/components/cover-letter/cover-letter-pdf-document";
+import { generateResumeDocx } from "@/lib/docx/resume-docx";
+import { generateCoverLetterDocx } from "@/lib/docx/cover-letter-docx";
+import { downloadBlob, buildDocFilename } from "@/lib/download-utils";
 import { cn } from "@/lib/utils";
 import { useResumeEditorStore } from "../store/resume-editor-store-provider";
 
@@ -32,6 +35,7 @@ export function ResumeEditorActions({
     resume: true,
     coverLetter: true
   });
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'word'>('pdf');
 
   // Save Resume
   const handleSave = async () => {
@@ -135,46 +139,31 @@ export function ResumeEditorActions({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
+              <Button
                 onClick={async () => {
                   try {
+                    const isWord = downloadFormat === 'word';
+                    const ext = isWord ? 'docx' : 'pdf';
+
                     // Download Resume if selected
                     if (downloadOptions.resume) {
-                      const blob = await pdf(<ResumePDFDocument resume={resume} />).toBlob();
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      const resumeRole = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
-                      const resumeCompany = !resume.is_base_resume && resume.name?.includes(' at ')
-                        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
-                        : '';
-                      link.download = `${resume.first_name}_${resume.last_name}${resumeRole}${resumeCompany}_Resume.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
+                      const blob = isWord
+                        ? await generateResumeDocx(resume)
+                        : await pdf(<ResumePDFDocument resume={resume} />).toBlob();
+                      downloadBlob(blob, buildDocFilename(resume, 'Resume', ext));
                     }
 
                     // Download Cover Letter if selected and exists
                     if (downloadOptions.coverLetter && resume.has_cover_letter) {
-                      const clBlob = await pdf(<CoverLetterPDFDocument resume={resume} />).toBlob();
-                      const clUrl = URL.createObjectURL(clBlob);
-                      const clLink = document.createElement('a');
-                      clLink.href = clUrl;
-                      const clRole = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
-                      const clCompany = !resume.is_base_resume && resume.name?.includes(' at ')
-                        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
-                        : '';
-                      clLink.download = `${resume.first_name}_${resume.last_name}${clRole}${clCompany}_Cover_Letter.pdf`;
-                      document.body.appendChild(clLink);
-                      clLink.click();
-                      document.body.removeChild(clLink);
-                      URL.revokeObjectURL(clUrl);
+                      const clBlob = isWord
+                        ? await generateCoverLetterDocx(resume)
+                        : await pdf(<CoverLetterPDFDocument resume={resume} />).toBlob();
+                      downloadBlob(clBlob, buildDocFilename(resume, 'Cover_Letter', ext));
                     }
 
                     toast({
                       title: "Download started",
-                      description: "Your documents are being downloaded.",
+                      description: `Your documents are being downloaded as ${isWord ? 'Word' : 'PDF'}.`,
                     });
                   } catch (error) {
                     console.error(error);
@@ -204,8 +193,39 @@ export function ResumeEditorActions({
               )}
             >
               <div className="space-y-3">
+                {/* Format selector */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground/70">Format</span>
+                  <div className={cn(
+                    "flex rounded-md p-0.5",
+                    resume.is_base_resume ? "bg-indigo-100" : "bg-rose-100"
+                  )}>
+                    {(['pdf', 'word'] as const).map((fmt) => (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => setDownloadFormat(fmt)}
+                        className={cn(
+                          "flex-1 rounded-[5px] px-2 py-1 text-xs font-medium transition-all",
+                          downloadFormat === fmt
+                            ? cn(
+                                "shadow-sm",
+                                resume.is_base_resume ? "bg-indigo-600 text-white" : "bg-rose-600 text-white"
+                              )
+                            : "text-foreground/60 hover:text-foreground"
+                        )}
+                      >
+                        {fmt === 'pdf' ? 'PDF' : 'Word'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className={cn(
+                  "h-px w-full",
+                  resume.is_base_resume ? "bg-indigo-200" : "bg-rose-200"
+                )} />
                 <label className="flex items-center space-x-2">
-                  <Checkbox 
+                  <Checkbox
                     checked={downloadOptions.resume}
                     onCheckedChange={(checked) => 
                       setDownloadOptions(prev => ({ ...prev, resume: checked as boolean }))

@@ -9,6 +9,8 @@ import { CoverLetterContextMenu } from "@/components/cover-letter/cover-letter-c
 import { ResumeContextMenu } from "../preview/resume-context-menu";
 import { pdf } from '@react-pdf/renderer';
 import { CoverLetterPDFDocument } from "@/components/cover-letter/cover-letter-pdf-document";
+import { generateCoverLetterDocx } from "@/lib/docx/cover-letter-docx";
+import { downloadBlob, buildDocFilename } from "@/lib/download-utils";
 import { toast } from "@/hooks/use-toast";
 
 interface PreviewPanelProps {
@@ -24,19 +26,19 @@ export function PreviewPanel({
   const handleDownloadCoverLetterPDF = async () => {
     try {
       const blob = await pdf(<CoverLetterPDFDocument resume={resume} />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const role = resume.target_role ? `_${resume.target_role.replace(/\s+/g, '_')}` : '';
-      const company = !resume.is_base_resume && resume.name?.includes(' at ')
-        ? `_${resume.name.split(' at ').slice(1).join(' at ').replace(/\s+/g, '_')}`
-        : '';
-      link.download = `${resume.first_name}_${resume.last_name}${role}${company}_Cover_Letter.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, buildDocFilename(resume, 'Cover_Letter', 'pdf'));
       toast({ title: "Download started", description: "Your cover letter is being downloaded." });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Download failed", description: "Unable to download cover letter.", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadCoverLetterWord = async () => {
+    try {
+      const blob = await generateCoverLetterDocx(resume);
+      downloadBlob(blob, buildDocFilename(resume, 'Cover_Letter', 'docx'));
+      toast({ title: "Download started", description: "Your cover letter is being downloaded as Word." });
     } catch (error) {
       console.error(error);
       toast({ title: "Download failed", description: "Unable to download cover letter.", variant: "destructive" });
@@ -72,6 +74,7 @@ export function PreviewPanel({
       {resume.has_cover_letter && resume.cover_letter?.content && (
         <CoverLetterContextMenu
           onDownloadPDF={handleDownloadCoverLetterPDF}
+          onDownloadWord={handleDownloadCoverLetterWord}
           onCopyToClipboard={handleCopyCoverLetterToClipboard}
         >
           <CoverLetterPreview resume={resume} containerWidth={width} />
