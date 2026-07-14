@@ -67,6 +67,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "diff-match-patch": "^1.0.5",
+    "docx": "^9.7.1",
     "embla-carousel-react": "^8.5.2",
     "framer-motion": "^11.15.0",
     "html2canvas": "^1.4.1",
@@ -110,7 +111,8 @@
     "tailwindcss-animate": "^1.0.7",
     "tiptap-markdown": "^0.8.10",
     "use-stick-to-bottom": "1.0.30",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

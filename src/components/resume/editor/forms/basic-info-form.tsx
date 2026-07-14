@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Globe, Linkedin, Github, User, UserCircle2, FileText, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useResumeContext } from '../resume-editor-context';
+import { useResumeEditorStore } from '../store/resume-editor-store-provider';
 import { memo, useCallback } from 'react';
 
 interface BasicInfoFormProps {
@@ -36,11 +36,11 @@ const BasicInfoField = memo(function BasicInfoField({
   placeholder: string;
   type?: string;
 }) {
-  const { dispatch } = useResumeContext();
-  
+  const updateField = useResumeEditorStore((s) => s.updateField);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch({ type: 'UPDATE_FIELD', field, value: e.target.value });
-  }, [dispatch, field]);
+    updateField(field, e.target.value);
+  }, [updateField, field]);
 
   return (
     <div className="relative group">
@@ -69,12 +69,8 @@ const BasicInfoField = memo(function BasicInfoField({
 export const BasicInfoForm = memo(function BasicInfoFormComponent({
   profile
 }: BasicInfoFormProps) {
-  const { state, dispatch } = useResumeContext();
-  const { resume } = state;
-
-  const updateField = (field: keyof typeof resume, value: string) => {
-    dispatch({ type: 'UPDATE_FIELD', field, value });
-  };
+  const resume = useResumeEditorStore((s) => s.resume);
+  const updateField = useResumeEditorStore((s) => s.updateField);
 
   const handleFillFromProfile = () => {
     if (!profile) return;
@@ -197,13 +193,7 @@ export const BasicInfoForm = memo(function BasicInfoFormComponent({
               </div>
               <Textarea
                 value={resume.professional_summary || ''}
-                onChange={(e) =>
-                  dispatch({
-                    type: 'UPDATE_FIELD',
-                    field: 'professional_summary',
-                    value: e.target.value,
-                  })
-                }
+                onChange={(e) => updateField('professional_summary', e.target.value)}
                 rows={5}
                 className="pr-10 text-sm bg-white/50 border-gray-200 rounded-lg
                   focus:border-teal-500/40 focus:ring-2 focus:ring-teal-500/20

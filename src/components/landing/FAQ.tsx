@@ -23,7 +23,7 @@ export function FAQ() {
     },
     {
       question: "Is ResumeLM really free to use?",
-      answer: "Yes! Our free plan includes 2 base resumes and 5 tailored resumes using your own API keys. You can also self-host the entire platform. Our Pro plan ($20/month) provides unlimited resumes and access to premium AI models without needing your own API keys."
+      answer: "Yes! Bring your own API keys and use the platform for free."
     },
     {
       question: "What makes ResumeLM different from other resume builders?",

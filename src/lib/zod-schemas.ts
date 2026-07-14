@@ -140,6 +140,7 @@ export const sectionConfigSchema = z.object({
   visible: z.boolean(),
   max_items: z.number().nullable().optional(),
   style: z.enum(['grouped', 'list', 'grid']).optional(),
+  title: z.string().trim().max(60).optional(),
 });
 
 // Main Resume Schema
@@ -362,3 +363,71 @@ export const resumeScoreSchema = z.object({
 });
 
 export type ResumeScoreMetrics = z.infer<typeof resumeScoreSchema>; 
+// ============================================================
+// Interview Coach schemas
+// ============================================================
+
+export const INTERVIEW_QUESTION_CATEGORIES = [
+  'screening',
+  'behavioral',
+  'technical',
+  'system_design',
+  'dsa',
+  'culture_fit',
+] as const;
+
+// Category planner output: which categories apply and how many questions each.
+export const interviewCategoryPlanSchema = z.object({
+  categories: z
+    .array(
+      z.object({
+        category: z.enum(INTERVIEW_QUESTION_CATEGORIES),
+        count: z.number().int().min(2).max(6),
+      })
+    )
+    .min(1),
+});
+
+// A single predicted interview question with a STAR-format model answer.
+// `id` and `category` are added server-side after generation.
+export const interviewQuestionSchema = z.object({
+  question: z.string(),
+  star: z.object({
+    situation: z.string(),
+    task: z.string(),
+    action: z.string(),
+    result: z.string(),
+  }),
+  whatYouLearned: z.string(),
+  tips: z.array(z.string()).max(2).optional(),
+});
+
+// Per-category question agent output.
+export const categoryQuestionsSchema = z.object({
+  questions: z.array(interviewQuestionSchema),
+});
+
+// Company research: culture, official website, and products/services.
+// `websiteUrl` is a loose nullable string (models sometimes emit "");
+// the UI only renders it as a link when it starts with "http".
+export const companyResearchSchema = z.object({
+  websiteUrl: z.string().nullable(),
+  cultureAndValues: z.string(),
+  productsAndServices: z
+    .array(z.object({ name: z.string(), description: z.string() }))
+    .max(6),
+});
+
+// Web-sourced interview experiences. One unified item: questions and
+// experience narratives all live in `content`. Items with a non-http
+// `sourceUrl` are dropped server-side.
+export const interviewExperienceItemSchema = z.object({
+  source: z.string(),
+  sourceUrl: z.string(),
+  roleContext: z.string().optional(),
+  content: z.string(),
+});
+
+export const interviewExperiencesSchema = z.object({
+  items: z.array(interviewExperienceItemSchema).max(20),
+});

@@ -6,7 +6,7 @@
 
 **🚀 The AI-Powered Resume Builder That Gets You Hired**
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-resumelm.com-blue?style=for-the-badge)](https://resumelm.com)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-resumelm.com-blue?style=for-the-badge)](https://github.com/saivivek116/resume-lm)
 [![GitHub Stars](https://img.shields.io/github/stars/olyaiy/resume-lm?style=for-the-badge)](https://github.com/olyaiy/resume-lm/stargazers)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -65,7 +65,7 @@
 
 ## 🚀 Live Demo & Getting Started
 
-**[Try ResumeLM Now - 100% Free](https://resumelm.com)**
+**[Try ResumeLM Now - 100% Free](https://github.com/saivivek116/resume-lm)**
 
 No credit card required • No signup fees • Open source
 
@@ -344,7 +344,7 @@ For businesses requiring proprietary licenses or commercial support, please cont
 
 **Ready to land your dream job?**
 
-[![Get Started Free](https://img.shields.io/badge/🚀_Get_Started_Free-resumelm.com-blue?style=for-the-badge&color=6366f1)](https://resumelm.com)
+[![Get Started Free](https://img.shields.io/badge/🚀_Get_Started_Free-resumelm.com-blue?style=for-the-badge&color=6366f1)](https://github.com/saivivek116/resume-lm)
 [![View Source Code](https://img.shields.io/badge/📚_View_Source-GitHub-black?style=for-the-badge&logo=github)](https://github.com/olyaiy/resume-lm)
 
 **Built with ❤️ using Next.js**

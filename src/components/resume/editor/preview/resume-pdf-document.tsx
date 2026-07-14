@@ -1,6 +1,6 @@
 'use client';
 
-import { Resume, DEFAULT_SECTION_ORDER } from "@/lib/types";
+import { Resume, DEFAULT_SECTION_ORDER, getSectionTitle } from "@/lib/types";
 import { Document as PDFDocument, Page as PDFPage, Text, View, StyleSheet, Link, Image } from '@react-pdf/renderer';
 import { memo, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
@@ -124,33 +124,37 @@ const HeaderSection = memo(function HeaderSection({
 
 const ProfessionalSummarySection = memo(function ProfessionalSummarySection({
   summary,
-  styles
+  styles,
+  title
 }: {
   summary?: string | null;
   styles: ReturnType<typeof createResumeStyles>;
+  title: string;
 }) {
   if (!summary || !summary.trim()) return null;
 
   return (
     <View style={styles.summarySection}>
-      <Text style={styles.sectionTitle}>Professional Summary</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       <Text style={styles.summaryText}>{summary}</Text>
     </View>
   );
 });
 
 const SkillsSection = memo(function SkillsSection({
-  skills, 
-  styles 
-}: { 
-  skills: Resume['skills']; 
+  skills,
+  styles,
+  title
+}: {
+  skills: Resume['skills'];
   styles: ReturnType<typeof createResumeStyles>;
+  title: string;
 }) {
   if (!skills?.length) return null;
-  
+
   return (
     <View style={styles.skillsSection}>
-      <Text style={styles.sectionTitle}>Skills</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.skillsGrid}>
         {skills.map((skillCategory, index) => (
           <View key={index} style={styles.skillCategory}>
@@ -163,19 +167,21 @@ const SkillsSection = memo(function SkillsSection({
   );
 });
 
-const ExperienceSection = memo(function ExperienceSection({ 
-  experiences, 
-  styles 
-}: { 
-  experiences: Resume['work_experience']; 
+const ExperienceSection = memo(function ExperienceSection({
+  experiences,
+  styles,
+  title
+}: {
+  experiences: Resume['work_experience'];
   styles: ReturnType<typeof createResumeStyles>;
+  title: string;
 }) {
   const processText = useTextProcessor();
   if (!experiences?.length) return null;
 
   return (
     <View style={styles.experienceSection}>
-      <Text style={styles.sectionTitle}>Experience</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {experiences.map((experience, index) => (
         <View key={index} style={styles.experienceItem}>
           <View style={styles.experienceHeader}>
@@ -209,19 +215,21 @@ const ExperienceSection = memo(function ExperienceSection({
   );
 });
 
-const ProjectsSection = memo(function ProjectsSection({ 
-  projects, 
-  styles 
-}: { 
-  projects: Resume['projects']; 
+const ProjectsSection = memo(function ProjectsSection({
+  projects,
+  styles,
+  title
+}: {
+  projects: Resume['projects'];
   styles: ReturnType<typeof createResumeStyles>;
+  title: string;
 }) {
   const processText = useTextProcessor();
   if (!projects?.length) return null;
 
   return (
     <View style={styles.projectsSection}>
-      <Text style={styles.sectionTitle}>Projects</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {projects.map((project, index) => (
         <View key={index} style={styles.projectItem}>
           <View style={styles.projectHeader}>
@@ -269,19 +277,21 @@ const ProjectsSection = memo(function ProjectsSection({
   );
 });
 
-const EducationSection = memo(function EducationSection({ 
-  education, 
-  styles 
-}: { 
-  education: Resume['education']; 
+const EducationSection = memo(function EducationSection({
+  education,
+  styles,
+  title
+}: {
+  education: Resume['education'];
   styles: ReturnType<typeof createResumeStyles>;
+  title: string;
 }) {
   const processText = useTextProcessor();
   if (!education?.length) return null;
 
   return (
     <View style={styles.educationSection}>
-      <Text style={styles.sectionTitle}>Education</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {education.map((edu, index) => (
         <View key={index} style={styles.educationItem}>
           <View style={styles.educationHeader}>
@@ -307,16 +317,18 @@ const EducationSection = memo(function EducationSection({
 
 const CertificationsSection = memo(function CertificationsSection({
   certifications,
-  styles
+  styles,
+  title
 }: {
   certifications: Resume['certifications'];
   styles: ReturnType<typeof createResumeStyles>;
+  title: string;
 }) {
   if (!certifications?.length) return null;
 
   return (
     <View style={styles.certificationsSection}>
-      <Text style={styles.sectionTitle}>Certifications</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.certificationsGrid}>
         {certifications.map((cert, index) => (
           <View key={index} style={styles.certificationItem}>
@@ -668,17 +680,17 @@ export const ResumePDFDocument = memo(function ResumePDFDocument({ resume }: Res
         })().map((id) => {
           switch (id) {
             case 'professional_summary':
-              return <ProfessionalSummarySection key={id} summary={resume.professional_summary} styles={styles} />;
+              return <ProfessionalSummarySection key={id} summary={resume.professional_summary} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             case 'skills':
-              return <SkillsSection key={id} skills={resume.skills} styles={styles} />;
+              return <SkillsSection key={id} skills={resume.skills} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             case 'work_experience':
-              return <ExperienceSection key={id} experiences={resume.work_experience} styles={styles} />;
+              return <ExperienceSection key={id} experiences={resume.work_experience} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             case 'projects':
-              return <ProjectsSection key={id} projects={resume.projects} styles={styles} />;
+              return <ProjectsSection key={id} projects={resume.projects} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             case 'education':
-              return <EducationSection key={id} education={resume.education} styles={styles} />;
+              return <EducationSection key={id} education={resume.education} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             case 'certifications':
-              return <CertificationsSection key={id} certifications={resume.certifications} styles={styles} />;
+              return <CertificationsSection key={id} certifications={resume.certifications} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             default:
               return null;
           }
