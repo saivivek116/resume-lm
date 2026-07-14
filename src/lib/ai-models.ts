@@ -160,22 +160,6 @@ export const AI_MODELS: AIModel[] = [
     }
   },
   {
-    id: 'google/gemini-2.5-flash-lite',
-    name: 'Gemini 2.5 Flash Lite',
-    provider: 'openrouter',
-    features: {
-      isRecommended: false,
-      isUnstable: false,
-      maxTokens: 1048576,
-      supportsVision: false,
-      supportsTools: true
-    },
-    availability: {
-      requiresApiKey: true,
-      requiresPro: false
-    }
-  },
-  {
     id: 'google/gemini-3-pro-preview',
     name: 'Gemini 3 Pro Preview',
     provider: 'openrouter',
@@ -209,38 +193,6 @@ export const AI_MODELS: AIModel[] = [
     }
   },
   {
-    id: 'openai/gpt-oss-20b',
-    name: 'GPT-OSS 20B',
-    provider: 'openrouter',
-    features: {
-      isRecommended: false,
-      isUnstable: false,
-      isFree: true,
-      maxTokens: 131072,
-      supportsVision: false,
-      supportsTools: true
-    },
-    availability: {
-      requiresApiKey: true,
-      requiresPro: false
-    }
-  },
-  {
-    id: 'z-ai/glm-4.6:exacto',
-    name: 'GLM-4.6 Exacto',
-    provider: 'openrouter',
-    features: {
-      isRecommended: false,
-      isUnstable: false,
-      supportsVision: false,
-      supportsTools: true
-    },
-    availability: {
-      requiresApiKey: true,
-      requiresPro: false
-    }
-  },
-  {
     id: 'deepseek/deepseek-v3.2:nitro',
     name: 'DeepSeek V3.2',
     provider: 'openrouter',
@@ -258,10 +210,11 @@ export const AI_MODELS: AIModel[] = [
     }
   },
   {
-    id: 'google/gemini-3-flash-preview',
-    name: 'Gemini 3 Flash Preview',
+    id: 'deepseek/deepseek-v4-flash',
+    name: 'DeepSeek V4 Flash',
     provider: 'openrouter',
     features: {
+      isFree: false,
       isRecommended: false,
       isUnstable: false,
       maxTokens: 1000000,

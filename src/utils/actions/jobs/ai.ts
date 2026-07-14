@@ -13,10 +13,8 @@ import { initializeAIClient } from '@/utils/ai-tools';
 // Build model candidates list - prioritize user's selected model if provided
 function getModelCandidates(config?: AIConfig) {
   const fallbackModels: AIConfig[] = [
-    { model: 'z-ai/glm-4.6:exacto' },
     { model: 'openai/gpt-5-nano' },
     { model: 'openai/gpt-oss-120b' },
-    { model: 'openai/gpt-oss-20b' },
     { model: 'deepseek/deepseek-v3.2:nitro' },
   ];
 
