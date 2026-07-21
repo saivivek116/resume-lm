@@ -8,8 +8,57 @@ import { z } from "zod";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { getDefaultModel } from "@/lib/ai-models";
 import { BULLET_IMPACT_SORTER_MESSAGE, PROFESSIONAL_SUMMARY_GENERATOR_MESSAGE, PROJECT_GENERATOR_MESSAGE, PROJECT_IMPROVER_MESSAGE, TEXT_ANALYZER_SYSTEM_MESSAGE, WORK_EXPERIENCE_GENERATOR_MESSAGE, WORK_EXPERIENCE_IMPROVER_MESSAGE } from "@/lib/prompts";
-import { projectAnalysisSchema, workExperienceItemsSchema } from "@/lib/zod-schemas";
+import { projectAnalysisSchema, workExperienceItemsSchema, type TextImport } from "@/lib/zod-schemas";
 import { WorkExperience } from "@/lib/types";
+
+/**
+ * Normalizes description fields that weaker models may return as a single string
+ * instead of a string array. Mutates and returns the parsed object.
+ */
+export function normalizeDescriptions(content: TextImport): TextImport {
+  if (content.work_experience) {
+    content.work_experience = content.work_experience.map((item) => ({
+      ...item,
+      description: Array.isArray(item.description)
+        ? item.description
+        : typeof item.description === 'string'
+          ? [item.description]
+          : [],
+      technologies: item.technologies ?? [],
+      location: item.location ?? '',
+    }));
+  }
+  if (content.projects) {
+    content.projects = content.projects.map((item) => ({
+      ...item,
+      description: Array.isArray(item.description)
+        ? item.description
+        : typeof item.description === 'string'
+          ? [item.description]
+          : [],
+      technologies: item.technologies ?? [],
+      date: item.date ?? '',
+      url: item.url ?? '',
+      github_url: item.github_url ?? '',
+    }));
+  }
+  if (content.education) {
+    content.education = content.education.map((item) => ({
+      ...item,
+      description: Array.isArray(item.description)
+        ? item.description
+        : typeof item.description === 'string'
+          ? [item.description]
+          : [],
+      field: item.field ?? '',
+      date: item.date ?? '',
+      gpa: item.gpa ?? null,
+      location: item.location ?? '',
+      achievements: item.achievements ?? [],
+    }));
+  }
+  return content;
+}
 
 
 
@@ -60,7 +109,12 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
           - Do not add any formatting to section titles or headers.
           - Use empty arrays ([]) for any sections that do not contain relevant items.
 
-        3. **Output Requirements:**
+        3. **Description Fields Must Be Arrays:**
+          - Every 'description' field in work_experience, projects, and education MUST be a JSON array of strings, never a single string.
+          - If there is only one sentence or bullet for a section, still wrap it as an array with one element, e.g. ["Single bullet here."].
+          - Education example: "description": ["Computer Science & Engineering (Data Science)"].
+
+        4. **Output Requirements:**
           - The final output must be a valid JSON object that adheres to the specified schema.
           - Include only the most relevant items, optimized for the target role.
           - Do not add any new information or rephrase the provided content—only apply minor formatting (like bolding) to emphasize key points.
@@ -69,24 +123,25 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
     Extract and transform the resume information from the following text:
     ${prompt}
     Now, format this information into the JSON object according to the schema, ensuring it is optimized for the target role: ${targetRole}.`,
-    
   });
-  
+
+  const normalizedContent = normalizeDescriptions(object.content);
+
   const updatedResume = {
     ...existingResume,
-    ...(object.content.first_name && { first_name: object.content.first_name }),
-    ...(object.content.last_name && { last_name: object.content.last_name }),
-    ...(object.content.email && { email: object.content.email }),
-    ...(object.content.phone_number && { phone_number: object.content.phone_number }),
-    ...(object.content.location && { location: object.content.location }),
-    ...(object.content.website && { website: object.content.website }),
-    ...(object.content.linkedin_url && { linkedin_url: object.content.linkedin_url }),
-    ...(object.content.github_url && { github_url: object.content.github_url }),
+    ...(normalizedContent.first_name && { first_name: normalizedContent.first_name }),
+    ...(normalizedContent.last_name && { last_name: normalizedContent.last_name }),
+    ...(normalizedContent.email && { email: normalizedContent.email }),
+    ...(normalizedContent.phone_number && { phone_number: normalizedContent.phone_number }),
+    ...(normalizedContent.location && { location: normalizedContent.location }),
+    ...(normalizedContent.website && { website: normalizedContent.website }),
+    ...(normalizedContent.linkedin_url && { linkedin_url: normalizedContent.linkedin_url }),
+    ...(normalizedContent.github_url && { github_url: normalizedContent.github_url }),
     
-    work_experience: [...existingResume.work_experience, ...(object.content.work_experience || [])],
-    education: [...existingResume.education, ...(object.content.education || [])],
-    skills: [...existingResume.skills, ...(object.content.skills || [])],
-    projects: [...existingResume.projects, ...(object.content.projects || [])],
+    work_experience: [...existingResume.work_experience, ...(normalizedContent.work_experience || [])],
+    education: [...existingResume.education, ...(normalizedContent.education || [])],
+    skills: [...existingResume.skills, ...(normalizedContent.skills || [])],
+    projects: [...existingResume.projects, ...(normalizedContent.projects || [])],
   };
 
   
@@ -215,8 +270,9 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
           prompt: text,
           system: systemPrompt,
           });
+
       
-          return object.content;
+          return normalizeDescriptions(object.content);
       }
       
       // WORK EXPERIENCE MODIFICATION
@@ -258,23 +314,25 @@ export async function convertTextToResume(prompt: string, existingResume: Resume
           prompt: `Extract relevant resume information from the following text, including basic information (name, contact details, etc) and professional experience. Format them according to the schema:\n\n${prompt}`,
           system: systemPrompt,
           });
-          
+
+          const normalizedAddContent = normalizeDescriptions(object.content);
+
           // Merge the AI-generated content with existing resume data
           const updatedResume = {
           ...existingResume,
-          ...(object.content.first_name && { first_name: object.content.first_name }),
-          ...(object.content.last_name && { last_name: object.content.last_name }),
-          ...(object.content.email && { email: object.content.email }),
-          ...(object.content.phone_number && { phone_number: object.content.phone_number }),
-          ...(object.content.location && { location: object.content.location }),
-          ...(object.content.website && { website: object.content.website }),
-          ...(object.content.linkedin_url && { linkedin_url: object.content.linkedin_url }),
-          ...(object.content.github_url && { github_url: object.content.github_url }),
+          ...(normalizedAddContent.first_name && { first_name: normalizedAddContent.first_name }),
+          ...(normalizedAddContent.last_name && { last_name: normalizedAddContent.last_name }),
+          ...(normalizedAddContent.email && { email: normalizedAddContent.email }),
+          ...(normalizedAddContent.phone_number && { phone_number: normalizedAddContent.phone_number }),
+          ...(normalizedAddContent.location && { location: normalizedAddContent.location }),
+          ...(normalizedAddContent.website && { website: normalizedAddContent.website }),
+          ...(normalizedAddContent.linkedin_url && { linkedin_url: normalizedAddContent.linkedin_url }),
+          ...(normalizedAddContent.github_url && { github_url: normalizedAddContent.github_url }),
           
-          work_experience: [...existingResume.work_experience, ...(object.content.work_experience || [])],
-          education: [...existingResume.education, ...(object.content.education || [])],
-          skills: [...existingResume.skills, ...(object.content.skills || [])],
-          projects: [...existingResume.projects, ...(object.content.projects || [])],
+          work_experience: [...existingResume.work_experience, ...(normalizedAddContent.work_experience || [])],
+          education: [...existingResume.education, ...(normalizedAddContent.education || [])],
+          skills: [...existingResume.skills, ...(normalizedAddContent.skills || [])],
+          projects: [...existingResume.projects, ...(normalizedAddContent.projects || [])],
           };
 
           return updatedResume;

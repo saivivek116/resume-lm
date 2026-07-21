@@ -39,11 +39,13 @@ export const suggestProjectTool = createTool({
 export const suggestSkillTool = createTool({
   description: 'Suggest improvements for a specific skill category',
   parameters: z.object({
-    index: z.number().describe('Index of the skill category to improve'),
+    index: z.number().describe(
+      'Index of the skill category to improve. To ADD a brand-new category, pass an index equal to the current number of skill categories (one past the last index).'
+    ),
     improved_skill: z.object({
       category: z.string(),
       items: z.array(z.string()),
-    }).describe('Improved version of the skill category. ONLY use this tool to add NEW skills or REMOVE existing skills, DO NOT ADD IN EXISTING SKILLS IN ANY WAY.'),
+    }).describe('The full desired state of this skill category (whether improving an existing category or adding a new one). Do not repeat items into a new category that already exist in another category.'),
   }),
 });
 

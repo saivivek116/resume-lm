@@ -105,6 +105,8 @@ export async function POST(req: Request) {
       3. For skill improvements:
          - Use 'suggest_skill_improvement' with 'index' and 'improved_skill' fields
          - Only use for adding new or removing existing skills
+         - To add a brand-new skill category, pass index equal to the current number
+           of skill categories (i.e. skills.length) — do NOT use 'modifyWholeResume' for this
 
       4. For education improvements:
          - Use 'suggest_education_improvement' with 'index' and 'improved_education' fields

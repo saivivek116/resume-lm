@@ -10,6 +10,15 @@ export const workExperienceSchema = z.object({
   technologies: z.array(z.string()),
 });
 
+export const workExperienceImportSchema = z.object({
+  company: z.string(),
+  position: z.string(),
+  date: z.string(),
+  description: z.array(z.string()),
+  technologies: z.array(z.string()).nullable(),
+  location: z.string().nullable(),
+});
+
 export const educationSchema = z.object({
   school: z.string(),
   degree: z.string(),
@@ -20,6 +29,17 @@ export const educationSchema = z.object({
   achievements: z.array(z.string()),
 });
 
+export const educationImportSchema = z.object({
+  school: z.string(),
+  degree: z.string(),
+  field: z.string().nullable(),
+  date: z.string().nullable(),
+  description: z.array(z.string()).nullable(),
+  gpa: z.string().nullable(),
+  location: z.string().nullable(),
+  achievements: z.array(z.string()).nullable(),
+});
+
 export const projectSchema = z.object({
   name: z.string(),
   description: z.array(z.string()),
@@ -27,6 +47,15 @@ export const projectSchema = z.object({
   technologies: z.array(z.string()),
   url: z.string(),
   github_url: z.string(),
+});
+
+export const projectImportSchema = z.object({
+  name: z.string(),
+  description: z.array(z.string()),
+  technologies: z.array(z.string()).nullable(),
+  date: z.string().nullable(),
+  url: z.string().nullable(),
+  github_url: z.string().nullable(),
 });
 
 export const skillSchema = z.object({
@@ -53,36 +82,13 @@ export const textImportSchema = z.object({
   github_url: z.string().nullable(),
 
   // Resume Sections
-  work_experience: z.array(z.object({
-    company: z.string(),
-    position: z.string(),
-    date: z.string(),
-    description: z.array(z.string()),
-    technologies: z.array(z.string()).nullable(),
-    location: z.string().nullable(),
-  })).nullable(),
-  education: z.array(z.object({
-    school: z.string(),
-    degree: z.string(),
-    field: z.string().nullable(),
-    date: z.string().nullable(),
-    description: z.array(z.string()).nullable(),
-    gpa: z.string().nullable(),
-    location: z.string().nullable(),
-    achievements: z.array(z.string()).nullable(),
-  })).nullable(),
+  work_experience: z.array(workExperienceImportSchema).nullable(),
+  education: z.array(educationImportSchema).nullable(),
   skills: z.array(z.object({
     category: z.string(),
     items: z.array(z.string()),
   })).nullable(),
-  projects: z.array(z.object({
-    name: z.string(),
-    description: z.array(z.string()),
-    technologies: z.array(z.string()).nullable(),
-    date: z.string().nullable(),
-    url: z.string().nullable(),
-    github_url: z.string().nullable(),
-  })).nullable(),
+  projects: z.array(projectImportSchema).nullable(),
 });
 
 export const documentSettingsSchema = z.object({
@@ -175,9 +181,13 @@ export const resumeSchema = z.object({
 
 // Type inference helpers
 export type Resume = z.infer<typeof resumeSchema>;
+export type TextImport = z.infer<typeof textImportSchema>;
 export type WorkExperience = z.infer<typeof workExperienceSchema>;
+export type WorkExperienceImport = z.infer<typeof workExperienceImportSchema>;
 export type Education = z.infer<typeof educationSchema>;
+export type EducationImport = z.infer<typeof educationImportSchema>;
 export type Project = z.infer<typeof projectSchema>;
+export type ProjectImport = z.infer<typeof projectImportSchema>;
 export type Skill = z.infer<typeof skillSchema>;
 export type DocumentSettings = z.infer<typeof documentSettingsSchema>;
 export type SectionConfig = z.infer<typeof sectionConfigSchema>;

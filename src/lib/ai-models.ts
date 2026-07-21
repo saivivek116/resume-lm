@@ -182,7 +182,6 @@ export const AI_MODELS: AIModel[] = [
     features: {
       isRecommended: false,
       isUnstable: false,
-      isFree: true,
       maxTokens: 131072,
       supportsVision: false,
       supportsTools: true
@@ -197,7 +196,6 @@ export const AI_MODELS: AIModel[] = [
     name: 'DeepSeek V3.2',
     provider: 'openrouter',
     features: {
-      isFree: true,
       isRecommended: true,
       isUnstable: false,
       maxTokens: 163840,
@@ -206,6 +204,23 @@ export const AI_MODELS: AIModel[] = [
     },
     availability: {
       requiresApiKey: false,
+      requiresPro: false
+    }
+  },
+  {
+    id: 'google/gemma-4-31b-it:free',
+    name: 'Gemma 4 31B IT',
+    provider: 'openrouter',
+    features: {
+      isFree: true,
+      isRecommended: true,
+      isUnstable: false,
+      maxTokens: 131072,
+      supportsVision: false,
+      supportsTools: true
+    },
+    availability: {
+      requiresApiKey: true,
       requiresPro: false
     }
   },
@@ -340,7 +355,7 @@ const MODEL_ALIASES: Record<string, string> = {
 // Default Model Configuration
 // ========================
 
-export const DEFAULT_MODEL = 'deepseek/deepseek-v3.2:nitro' as const
+export const DEFAULT_MODEL = 'google/gemma-4-31b-it:free' as const
 
 // ========================
 // Model Designations for Different Use Cases
@@ -354,7 +369,7 @@ export const MODEL_DESIGNATIONS = {
   // Fast & cheap model for parsing, simple tasks, quick analysis
   FAST_CHEAP: 'claude-sonnet-4-5-20250929',
   // Alternative fast & cheap option (free for all users)
-  FAST_CHEAP_FREE: 'deepseek/deepseek-v3.2:nitro',
+  FAST_CHEAP_FREE: 'google/gemma-4-31b-it:free',
   // Frontier model for complex tasks, deep analysis, best quality
   FRONTIER: 'gpt-5.2',
   // Alternative frontier model
@@ -365,7 +380,7 @@ export const MODEL_DESIGNATIONS = {
   VISION: 'claude-sonnet-4-5-20250929',
   // Default models by user type
   DEFAULT_PRO: 'gpt-5.2',
-  DEFAULT_FREE: 'deepseek/deepseek-v3.2:nitro'
+  DEFAULT_FREE: 'google/gemma-4-31b-it:free'
 } as const
 
 // Type for model designations

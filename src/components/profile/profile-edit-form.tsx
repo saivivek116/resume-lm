@@ -1,6 +1,8 @@
 'use client';
 
-import { Profile, WorkExperience, Education, Project, DEFAULT_DOCUMENT_SETTINGS, DEFAULT_COVER_LETTER_SETTINGS, ResumeSectionId, CoverLetterDocumentSettings } from "@/lib/types";
+import { Profile, DEFAULT_DOCUMENT_SETTINGS, DEFAULT_COVER_LETTER_SETTINGS, ResumeSectionId, CoverLetterDocumentSettings } from "@/lib/types";
+import type { WorkExperienceImport, EducationImport, ProjectImport } from "@/lib/zod-schemas";
+import { getDefaultModel } from "@/lib/ai-models";
 import { CoverLetterSettingsForm } from "@/components/cover-letter/cover-letter-settings-form";
 import type { ServiceName } from '@/lib/types';
 import { ProfileApiKeysForm } from '@/components/profile/profile-api-keys-form';
@@ -154,7 +156,7 @@ export function ProfileEditForm({ profile: initialProfile, keyStatus }: ProfileE
       setIsProcessingResume(true);
       
       const result = await formatProfileWithAI(content, {
-        model: 'deepseek/deepseek-v3.2:nitro'
+        model: getDefaultModel()
       });
       
       if (result) {
@@ -168,55 +170,49 @@ export function ProfileEditForm({ profile: initialProfile, keyStatus }: ProfileE
           website: result.website || null,
           linkedin_url: result.linkedin_url || null,
           github_url: result.github_url || null,
-          work_experience: Array.isArray(result.work_experience) 
-            ? result.work_experience.map((exp: Partial<WorkExperience>) => ({
+          work_experience: Array.isArray(result.work_experience)
+            ? result.work_experience.map((exp: Partial<WorkExperienceImport>) => ({
                 company: exp.company || '',
                 position: exp.position || '',
-                location: exp.location || '',
+                location: exp.location ?? '',
                 date: exp.date || '',
-                description: Array.isArray(exp.description) 
-                  ? exp.description 
-                  : [exp.description || ''],
-                technologies: Array.isArray(exp.technologies) 
-                  ? exp.technologies 
-                  : []
+                description: Array.isArray(exp.description)
+                  ? exp.description
+                  : [typeof exp.description === 'string' ? exp.description : ''],
+                technologies: exp.technologies ?? []
               }))
             : [],
           education: Array.isArray(result.education)
-            ? result.education.map((edu: Partial<Education>) => ({
+            ? result.education.map((edu: Partial<EducationImport>) => ({
                 school: edu.school || '',
                 degree: edu.degree || '',
-                field: edu.field || '',
-                location: edu.location || '',
-                date: edu.date || '',
-                gpa: edu.gpa ? parseFloat(edu.gpa.toString()) : undefined,
-                achievements: Array.isArray(edu.achievements) 
-                  ? edu.achievements 
-                  : []
+                field: edu.field ?? '',
+                location: edu.location ?? '',
+                date: edu.date ?? '',
+                gpa: edu.gpa && typeof edu.gpa === 'string' ? parseFloat(edu.gpa.toString()) : undefined,
+                achievements: edu.achievements ?? []
               }))
             : [],
           skills: Array.isArray(result.skills)
             ? result.skills.map((skill: { category: string; skills?: string[]; items?: string[] }) => ({
                 category: skill.category || '',
-                items: Array.isArray(skill.skills) 
-                  ? skill.skills 
-                  : Array.isArray(skill.items) 
-                    ? skill.items 
+                items: Array.isArray(skill.skills)
+                  ? skill.skills
+                  : Array.isArray(skill.items)
+                    ? skill.items
                     : []
               }))
             : [],
           projects: Array.isArray(result.projects)
-            ? result.projects.map((proj: Partial<Project>) => ({
+            ? result.projects.map((proj: Partial<ProjectImport>) => ({
                 name: proj.name || '',
-                description: Array.isArray(proj.description) 
-                  ? proj.description 
-                  : [proj.description || ''],
-                technologies: Array.isArray(proj.technologies) 
-                  ? proj.technologies 
-                  : [],
-                url: proj.url || undefined,
-                github_url: proj.github_url || undefined,
-                date: proj.date || ''
+                description: Array.isArray(proj.description)
+                  ? proj.description
+                  : [typeof proj.description === 'string' ? proj.description : ''],
+                technologies: proj.technologies ?? [],
+                url: proj.url ?? undefined,
+                github_url: proj.github_url ?? undefined,
+                date: proj.date ?? ''
               }))
             : []
         };

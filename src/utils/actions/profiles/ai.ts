@@ -5,6 +5,8 @@ import { RESUME_FORMATTER_SYSTEM_MESSAGE } from "@/lib/prompts";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { getDefaultModel } from '@/lib/ai-models';
 import { sanitizeUnknownStrings } from '@/lib/utils';
+import { normalizeDescriptions } from '@/utils/actions/resumes/ai';
+import type { TextImport } from '@/lib/zod-schemas';
 
 // TEXT RESUME -> PROFILE
 export async function formatProfileWithAI(
@@ -74,7 +76,8 @@ export async function formatProfileWithAI(
     //   console.dir(object.content, { depth: null, colors: true });
       console.log('USING THE MODEL: ', aiClient);
   
-      return sanitizeUnknownStrings(object.content);
+      const normalized = normalizeDescriptions(object.content as TextImport);
+      return sanitizeUnknownStrings(normalized);
     } catch (error) {
       throw error;
     }

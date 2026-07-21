@@ -565,11 +565,19 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                                       type={config.type}
                                       content={args[config.content]}
                                       currentContent={resume[config.field][args.index]}
-                                      onAccept={() => onResumeChange(config.field, 
-                                        resume[config.field].map((item: WorkExperience | Education | Project | Skill, i: number) => 
-                                          i === args.index ? args[config.content] : item
-                                        )
-                                      )}
+                                      onAccept={() => {
+                                        const current = resume[config.field];
+                                        const content = args[config.content];
+                                        if (!content) return;
+
+                                        const isExistingEntry = args.index >= 0 && args.index < current.length;
+                                        const updated = isExistingEntry
+                                          ? current.map((item: WorkExperience | Education | Project | Skill, i: number) =>
+                                              i === args.index ? content : item
+                                            )
+                                          : [...current, content];
+                                        onResumeChange(config.field, updated);
+                                      }}
                                       onReject={() => {}}
                                     />
                                   </div>
