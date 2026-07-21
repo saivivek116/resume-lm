@@ -5,7 +5,7 @@ import { RESUME_FORMATTER_SYSTEM_MESSAGE } from "@/lib/prompts";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { getDefaultModel } from '@/lib/ai-models';
 import { sanitizeUnknownStrings } from '@/lib/utils';
-import { normalizeDescriptions } from '@/utils/actions/resumes/ai';
+import { normalizeDescriptions } from '@/lib/resume-normalization';
 import type { TextImport } from '@/lib/zod-schemas';
 
 // TEXT RESUME -> PROFILE
