@@ -355,7 +355,7 @@ const MODEL_ALIASES: Record<string, string> = {
 // Default Model Configuration
 // ========================
 
-export const DEFAULT_MODEL = 'google/gemma-4-31b-it:free' as const
+export const DEFAULT_MODEL = 'deepseek/deepseek-v3.2:nitro' as const
 
 // ========================
 // Model Designations for Different Use Cases
