@@ -4,6 +4,10 @@ import { Resume, CoverLetterDocumentSettings, DEFAULT_COVER_LETTER_SETTINGS } fr
 import { Document as PDFDocument, Page as PDFPage, Text, View, StyleSheet, Link } from '@react-pdf/renderer';
 import { memo, useMemo } from 'react';
 import { parseCoverLetterHtml } from '@/lib/cover-letter-html-parser';
+import { registerResumeFonts, getPdfFonts } from '@/lib/fonts/resume-fonts';
+
+// Register embeddable fonts (Carlito, EB Garamond) once at module load.
+registerResumeFonts();
 
 export { DEFAULT_COVER_LETTER_SETTINGS };
 
@@ -26,7 +30,11 @@ function createCoverLetterStyles(settings: CoverLetterDocumentSettings = DEFAULT
     margin_horizontal = 72,
     header_name_size = 24,
     paragraph_spacing = 12,
+    document_font_family,
   } = settings;
+
+  // Resolve the PDF font-family names for the selected font (defaults to Helvetica).
+  const font = getPdfFonts(document_font_family);
 
   return StyleSheet.create({
     ...baseStyles,
@@ -35,7 +43,7 @@ function createCoverLetterStyles(settings: CoverLetterDocumentSettings = DEFAULT
       paddingBottom: margin_vertical,
       paddingLeft: margin_horizontal,
       paddingRight: margin_horizontal,
-      fontFamily: 'Helvetica',
+      fontFamily: font.regular,
       color: '#111827',
       fontSize: font_size,
       lineHeight: line_height,
@@ -45,7 +53,7 @@ function createCoverLetterStyles(settings: CoverLetterDocumentSettings = DEFAULT
     },
     name: {
       fontSize: header_name_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       marginBottom: 8,
       color: '#111827',
       textAlign: 'center',
@@ -71,10 +79,10 @@ function createCoverLetterStyles(settings: CoverLetterDocumentSettings = DEFAULT
       marginBottom: paragraph_spacing,
     },
     bold: {
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
     },
     italic: {
-      fontFamily: 'Helvetica-Oblique',
+      fontFamily: font.italic,
     },
     underline: {
       textDecoration: 'underline',

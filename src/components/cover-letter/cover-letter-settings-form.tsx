@@ -4,6 +4,8 @@ import { CoverLetterDocumentSettings } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChevronUp, ChevronDown, LayoutTemplate } from "lucide-react";
 import { DEFAULT_COVER_LETTER_SETTINGS } from "./cover-letter-pdf-document";
+import { FontFamilySelector } from "@/components/resume/editor/forms/font-family-selector";
+import type { ResumeFontFamily } from "@/lib/fonts/resume-fonts";
 
 interface CoverLetterSettingsFormProps {
   settings: CoverLetterDocumentSettings;
@@ -72,6 +74,10 @@ export function CoverLetterSettingsForm({ settings, onChange }: CoverLetterSetti
     onChange({ ...settings, [field]: value });
   };
 
+  const handleFontChange = (value: ResumeFontFamily) => {
+    onChange({ ...settings, document_font_family: value });
+  };
+
   return (
     <div className="space-y-6">
       {/* Presets */}
@@ -79,7 +85,7 @@ export function CoverLetterSettingsForm({ settings, onChange }: CoverLetterSetti
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onChange({ ...DEFAULT_COVER_LETTER_SETTINGS })}
+          onClick={() => onChange({ ...DEFAULT_COVER_LETTER_SETTINGS, document_font_family: settings.document_font_family })}
           className="relative h-20 group p-0 overflow-hidden border-slate-200 hover:border-emerald-600/40 transition-colors"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -101,7 +107,7 @@ export function CoverLetterSettingsForm({ settings, onChange }: CoverLetterSetti
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onChange({ ...COMPACT_SETTINGS })}
+          onClick={() => onChange({ ...COMPACT_SETTINGS, document_font_family: settings.document_font_family })}
           className="relative h-20 group p-0 overflow-hidden border-slate-200 hover:border-pink-600/40 transition-colors"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-pink-50/50 to-rose-50/50 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -124,6 +130,15 @@ export function CoverLetterSettingsForm({ settings, onChange }: CoverLetterSetti
 
       {/* Settings Sliders */}
       <div className="space-y-4 bg-slate-50/50 rounded-lg p-4 border border-slate-200/50">
+        {/* Font */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-muted-foreground">Font</Label>
+          <FontFamilySelector
+            value={settings.document_font_family}
+            onValueChange={handleFontChange}
+          />
+        </div>
+
         {/* Font Size */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">

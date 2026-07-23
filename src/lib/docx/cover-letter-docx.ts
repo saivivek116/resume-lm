@@ -7,6 +7,7 @@ import {
   BorderStyle,
 } from "docx";
 import { Resume, DEFAULT_COVER_LETTER_SETTINGS } from "@/lib/types";
+import { getDocxFontName } from "@/lib/fonts/resume-fonts";
 import {
   ptToHalfPoints,
   ptToTwip,
@@ -177,7 +178,7 @@ export async function generateCoverLetterDocx(resume: Resume): Promise<Blob> {
     styles: {
       default: {
         document: {
-          run: { font: "Helvetica", size, color: TEXT_COLOR },
+          run: { font: getDocxFontName(settings.document_font_family), size, color: TEXT_COLOR },
           paragraph: { spacing: { line: lineHeightToSpacing(settings.line_height) } },
         },
       },

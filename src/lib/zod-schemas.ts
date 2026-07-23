@@ -93,6 +93,7 @@ export const textImportSchema = z.object({
 
 export const documentSettingsSchema = z.object({
   // Global Settings
+  document_font_family: z.enum(['helvetica', 'calibri', 'garamond']).optional(),
   document_font_size: z.number(),
   document_line_height: z.number(),
   document_margin_vertical: z.number(),
@@ -128,6 +129,7 @@ export const documentSettingsSchema = z.object({
 });
 
 export const coverLetterDocumentSettingsSchema = z.object({
+  document_font_family: z.enum(['helvetica', 'calibri', 'garamond']).optional(),
   font_size: z.number(),
   line_height: z.number(),
   margin_vertical: z.number(),

@@ -16,6 +16,7 @@ import {
   getSectionTitle,
   ResumeSectionId,
 } from "@/lib/types";
+import { getDocxFontName } from "@/lib/fonts/resume-fonts";
 import {
   ptToHalfPoints,
   ptToTwip,
@@ -242,7 +243,7 @@ export async function generateResumeDocx(resume: Resume): Promise<Blob> {
     styles: {
       default: {
         document: {
-          run: { font: "Helvetica", size, color: TEXT_COLOR },
+          run: { font: getDocxFontName(settings.document_font_family), size, color: TEXT_COLOR },
           paragraph: { spacing: { line: lineHeightToSpacing(settings.document_line_height) } },
         },
       },

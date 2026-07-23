@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronUp, ChevronDown } from "lucide-react"
 import { Switch } from "@/components/ui/switch";
 import { SavedStylesDialog } from "./saved-styles-dialog";
+import { FontFamilySelector } from "./font-family-selector";
 import { LayoutTemplate, RotateCcw } from "lucide-react";
 
 interface DocumentSettingsFormProps {
@@ -595,6 +596,19 @@ export function DocumentSettingsForm({
             </div>
 
             <div className="space-y-4 bg-slate-50/50 rounded-lg p-4 border border-slate-200/50">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Font</Label>
+                <FontFamilySelector
+                  value={documentSettings?.document_font_family}
+                  onValueChange={(value) =>
+                    handleSettingsChange({
+                      ...documentSettings,
+                      document_font_family: value,
+                    })
+                  }
+                />
+              </div>
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium text-muted-foreground">Font Size</Label>

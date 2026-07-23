@@ -1,3 +1,5 @@
+import type { ResumeFontFamily } from "./fonts/resume-fonts";
+
 export interface WorkExperience {
   company: string;
   position: string;
@@ -237,6 +239,7 @@ export interface ResumeSummary {
 
 export interface DocumentSettings {
   // Global Settings
+  document_font_family?: ResumeFontFamily;
   document_font_size: number;
   document_line_height: number;
   document_margin_vertical: number;
@@ -275,6 +278,7 @@ export interface DocumentSettings {
 }
 
 export const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
+  document_font_family: 'helvetica',
   document_font_size: 10,
   document_line_height: 1.5,
   document_margin_vertical: 36,
@@ -300,6 +304,7 @@ export const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
 };
 
 export const COMPACT_DOCUMENT_SETTINGS: DocumentSettings = {
+  document_font_family: 'helvetica',
   footer_width: 0,
   show_ubc_footer: false,
   header_name_size: 24,
@@ -327,6 +332,7 @@ export const COMPACT_DOCUMENT_SETTINGS: DocumentSettings = {
 };
 
 export interface CoverLetterDocumentSettings {
+  document_font_family?: ResumeFontFamily; // default 'helvetica'
   font_size: number;           // default 11, range 9-13
   line_height: number;         // default 1.4, range 1-2
   margin_vertical: number;     // default 72 (1in), range 36-108
@@ -342,6 +348,7 @@ export interface CoverLetterData {
 }
 
 export const DEFAULT_COVER_LETTER_SETTINGS: CoverLetterDocumentSettings = {
+  document_font_family: 'helvetica',
   font_size: 11,
   line_height: 1.4,
   margin_vertical: 72,

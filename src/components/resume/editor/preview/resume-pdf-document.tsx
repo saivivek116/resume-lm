@@ -4,6 +4,11 @@ import { Resume, DEFAULT_SECTION_ORDER, getSectionTitle } from "@/lib/types";
 import { Document as PDFDocument, Page as PDFPage, Text, View, StyleSheet, Link, Image } from '@react-pdf/renderer';
 import { memo, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { registerResumeFonts, getPdfFonts } from '@/lib/fonts/resume-fonts';
+
+// Register embeddable resume fonts (Carlito, EB Garamond) once at module load.
+// Helvetica is a built-in React-PDF font and needs no registration.
+registerResumeFonts();
 
 // Base styles that don't depend on resume settings
 const baseStyles = {
@@ -24,11 +29,12 @@ const baseStyles = {
 // Create a cache outside of components to persist between renders
 const textProcessingCache = new Map<string, ReactNode[]>();
 
-// Memoized text processing function
-function useTextProcessor() {
+// Memoized text processing function. `boldFontFamily` is the resolved PDF font
+// family used for inline **bold** markdown so it matches the selected font.
+function useTextProcessor(boldFontFamily: string) {
   const processText = useCallback((text: string, ignoreMarkdown = false) => {
-    // Check cache first
-    const cacheKey = `${text}-${ignoreMarkdown}`;
+    // Check cache first (keyed by font so switching fonts doesn't return stale bold runs)
+    const cacheKey = `${boldFontFamily}-${text}-${ignoreMarkdown}`;
     if (textProcessingCache.has(cacheKey)) {
       return textProcessingCache.get(cacheKey);
     }
@@ -45,7 +51,7 @@ function useTextProcessor() {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     const processed = parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <Text key={index} style={{ fontFamily: 'Helvetica-Bold' }}>{part.slice(2, -2)}</Text>;
+        return <Text key={index} style={{ fontFamily: boldFontFamily }}>{part.slice(2, -2)}</Text>;
       }
       return <Text key={index}>{part}</Text>;
     });
@@ -53,7 +59,7 @@ function useTextProcessor() {
     // Store in cache
     textProcessingCache.set(cacheKey, processed);
     return processed;
-  }, []);
+  }, [boldFontFamily]);
 
   return processText;
 }
@@ -170,13 +176,15 @@ const SkillsSection = memo(function SkillsSection({
 const ExperienceSection = memo(function ExperienceSection({
   experiences,
   styles,
-  title
+  title,
+  boldFontFamily
 }: {
   experiences: Resume['work_experience'];
   styles: ReturnType<typeof createResumeStyles>;
   title: string;
+  boldFontFamily: string;
 }) {
-  const processText = useTextProcessor();
+  const processText = useTextProcessor(boldFontFamily);
   if (!experiences?.length) return null;
 
   return (
@@ -218,13 +226,15 @@ const ExperienceSection = memo(function ExperienceSection({
 const ProjectsSection = memo(function ProjectsSection({
   projects,
   styles,
-  title
+  title,
+  boldFontFamily
 }: {
   projects: Resume['projects'];
   styles: ReturnType<typeof createResumeStyles>;
   title: string;
+  boldFontFamily: string;
 }) {
-  const processText = useTextProcessor();
+  const processText = useTextProcessor(boldFontFamily);
   if (!projects?.length) return null;
 
   return (
@@ -280,13 +290,15 @@ const ProjectsSection = memo(function ProjectsSection({
 const EducationSection = memo(function EducationSection({
   education,
   styles,
-  title
+  title,
+  boldFontFamily
 }: {
   education: Resume['education'];
   styles: ReturnType<typeof createResumeStyles>;
   title: string;
+  boldFontFamily: string;
 }) {
-  const processText = useTextProcessor();
+  const processText = useTextProcessor(boldFontFamily);
   if (!education?.length) return null;
 
   return (
@@ -396,7 +408,11 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     education_margin_horizontal = 0,
     education_item_spacing = 4,
     footer_width = 95,
+    document_font_family,
   } = settings;
+
+  // Resolve the PDF font-family names for the selected font (defaults to Helvetica).
+  const font = getPdfFonts(document_font_family);
 
   return StyleSheet.create({
     ...baseStyles,
@@ -406,7 +422,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
       paddingBottom: document_margin_vertical,
       paddingLeft: document_margin_horizontal,
       paddingRight: document_margin_horizontal,
-      fontFamily: 'Helvetica',
+      fontFamily: font.regular,
       color: '#111827',
       fontSize: document_font_size,
       lineHeight: document_line_height,
@@ -418,7 +434,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     name: {
       fontSize: header_name_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       marginBottom: header_name_bottom_spacing,
       color: '#111827',
       textAlign: 'center',
@@ -433,7 +449,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     sectionTitle: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       marginBottom: 4,
       color: '#111827',
       textTransform: 'uppercase',
@@ -471,7 +487,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     skillCategoryTitle: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       color: '#111827',
       marginRight: 4,
       width: 'auto',
@@ -501,7 +517,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     companyName: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       color: '#111827',
     },
     jobTitle: {
@@ -565,13 +581,13 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     projectTitle: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       color: '#111827',
     },
     projectTechnologies: {
       fontSize: document_font_size,
       color: '#111827',
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       marginBottom: 0,
     },
     projectDescription: {
@@ -601,7 +617,7 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     schoolName: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       color: '#111827',
     },
     degree: {
@@ -625,12 +641,12 @@ function createResumeStyles(settings: Resume['document_settings'] = {
     },
     certificationName: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       color: '#111827',
     },
     certificationNameLink: {
       fontSize: document_font_size,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: font.bold,
       color: '#2563eb',
       textDecoration: 'none',
     },
@@ -659,6 +675,8 @@ interface ResumePDFDocumentProps {
 export const ResumePDFDocument = memo(function ResumePDFDocument({ resume }: ResumePDFDocumentProps) {
   // Memoize styles based on document settings
   const styles = useMemo(() => createResumeStyles(resume.document_settings), [resume.document_settings]);
+  // Resolved bold font family for inline **bold** markdown, matching the selected font.
+  const boldFontFamily = getPdfFonts(resume.document_settings?.document_font_family).bold;
 
   return (
     <PDFDocument
@@ -684,11 +702,11 @@ export const ResumePDFDocument = memo(function ResumePDFDocument({ resume }: Res
             case 'skills':
               return <SkillsSection key={id} skills={resume.skills} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             case 'work_experience':
-              return <ExperienceSection key={id} experiences={resume.work_experience} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
+              return <ExperienceSection key={id} experiences={resume.work_experience} styles={styles} title={getSectionTitle(resume.section_configs, id)} boldFontFamily={boldFontFamily} />;
             case 'projects':
-              return <ProjectsSection key={id} projects={resume.projects} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
+              return <ProjectsSection key={id} projects={resume.projects} styles={styles} title={getSectionTitle(resume.section_configs, id)} boldFontFamily={boldFontFamily} />;
             case 'education':
-              return <EducationSection key={id} education={resume.education} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
+              return <EducationSection key={id} education={resume.education} styles={styles} title={getSectionTitle(resume.section_configs, id)} boldFontFamily={boldFontFamily} />;
             case 'certifications':
               return <CertificationsSection key={id} certifications={resume.certifications} styles={styles} title={getSectionTitle(resume.section_configs, id)} />;
             default:
