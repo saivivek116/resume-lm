@@ -51,3 +51,6 @@ next-env.d.ts
 /tests
 
 .superpowers/
+
+# claude code local settings (personal, not shared)
+.claude/settings.local.json

@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla';
-import { Resume } from '@/lib/types';
+import { Resume, ResumeScoreMetrics } from '@/lib/types';
 
 /**
  * Fields whose value is an array of items, each carrying a `description: string[]`
@@ -15,6 +15,9 @@ export interface ResumeEditorState {
   isSaving: boolean;
   isDeleting: boolean;
   hasUnsavedChanges: boolean;
+  /** Last generated resume score analysis; kept here so it survives tab switches. */
+  scoreData: ResumeScoreMetrics | null;
+  isScoreCalculating: boolean;
 }
 
 export interface ResumeEditorActions {
@@ -31,6 +34,8 @@ export interface ResumeEditorActions {
 
   setSaving: (value: boolean) => void;
   setDeleting: (value: boolean) => void;
+  setScoreData: (score: ResumeScoreMetrics | null) => void;
+  setScoreCalculating: (value: boolean) => void;
   /** Mark the current resume as the saved baseline (clears `hasUnsavedChanges`). */
   markSaved: (savedResume?: Resume) => void;
 }
@@ -82,6 +87,8 @@ export function createResumeEditorStore(initialResume: Resume) {
       isSaving: false,
       isDeleting: false,
       hasUnsavedChanges: false,
+      scoreData: null,
+      isScoreCalculating: false,
 
       updateField: (field, value) =>
         updateResume((resume) => ({ ...resume, [field]: value })),
@@ -114,6 +121,8 @@ export function createResumeEditorStore(initialResume: Resume) {
 
       setSaving: (value) => set({ isSaving: value }),
       setDeleting: (value) => set({ isDeleting: value }),
+      setScoreData: (score) => set({ scoreData: score }),
+      setScoreCalculating: (value) => set({ isScoreCalculating: value }),
       markSaved: (savedResume) =>
         set((state) => {
           // Baseline becomes whatever was actually persisted. hasUnsavedChanges is

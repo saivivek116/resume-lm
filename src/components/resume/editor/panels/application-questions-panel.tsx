@@ -49,7 +49,7 @@ export function ApplicationQuestionsPanel({ resume, job, questions, onQuestionsC
       answer: '',
       createdAt: new Date().toISOString(),
     };
-    persistQuestions([...questions, newQ]);
+    persistQuestions([newQ, ...questions]);
     setNewQuestionText('');
     setIsAddingQuestion(false);
   };
