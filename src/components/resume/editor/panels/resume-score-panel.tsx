@@ -7,87 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, TrendingUp, Target, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { generateResumeScore } from "@/utils/actions/resumes/actions";
-import { Resume, Job as JobType } from "@/lib/types";
+import { Resume, Job as JobType, ResumeScoreMetrics } from "@/lib/types";
 import { useDefaultModel } from "@/hooks/use-api-keys";
 import { toast } from "@/hooks/use-toast";
+import { useResumeEditorStore } from "../store/resume-editor-store-provider";
 
-export interface ResumeScoreMetrics {
-  overallScore: {
-    score: number;
-    reason: string;
-  };
-  
-  completeness: {
-    contactInformation: {
-      score: number;
-      reason: string;
-    };
-    detailLevel: {
-      score: number;
-      reason: string;
-    };
-  };
-  
-  impactScore: {
-    activeVoiceUsage: {
-      score: number;
-      reason: string;
-    };
-    quantifiedAchievements: {
-      score: number;
-      reason: string;
-    };
-  };
-
-  roleMatch: {
-    skillsRelevance: {
-      score: number;
-      reason: string;
-    };
-    experienceAlignment: {
-      score: number;
-      reason: string;
-    };
-    educationFit: {
-      score: number;
-      reason: string;
-    };
-  };
-
-  // Job-specific scoring for tailored resumes
-  jobAlignment?: {
-    keywordMatch: {
-      score: number;
-      reason: string;
-      matchedKeywords?: string[];
-      missingKeywords?: string[];
-    };
-    requirementsMatch: {
-      score: number;
-      reason: string;
-      matchedRequirements?: string[];
-      gapAnalysis?: string[];
-    };
-    companyFit: {
-      score: number;
-      reason: string;
-      suggestions?: string[];
-    };
-  };
-
-  miscellaneous: {
-    [key: string]: {
-      score: number;
-      reason: string;
-    };
-  };
-
-  overallImprovements?: string[];
-  jobSpecificImprovements?: string[];
-  isTailoredResume?: boolean;
-}
+export type { ResumeScoreMetrics };
 
 // Add props interface
 interface ResumeScorePanelProps {
@@ -164,18 +91,17 @@ function parseStoredScoreEntry(raw: unknown): StoredScoreEntry | null {
   };
 }
 
-function getStoredScores(resumeId: string, signature: string): ResumeScoreMetrics | null {
+function getStoredScores(resumeId: string): ResumeScoreMetrics | null {
   if (typeof window === "undefined") return null;
 
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (!stored) return null;
-    
+
     const scores = new Map<string, unknown>(JSON.parse(stored));
     const storedEntry = parseStoredScoreEntry(scores.get(resumeId));
 
     if (!storedEntry) return null;
-    if (storedEntry.signature !== signature) return null;
 
     return storedEntry.score;
   } catch (error) {
@@ -217,15 +143,18 @@ export default function ResumeScorePanel({ resume, job }: ResumeScorePanelProps)
     () => createScoreSignature(resume, job, selectedModel),
     [resume, job, selectedModel]
   );
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [scoreData, setScoreData] = useState<ResumeScoreMetrics | null>(() => {
-    return getStoredScores(resume.id, scoreSignature);
-  });
+  const isCalculating = useResumeEditorStore((state) => state.isScoreCalculating);
+  const scoreData = useResumeEditorStore((state) => state.scoreData);
+  const setScoreData = useResumeEditorStore((state) => state.setScoreData);
+  const setIsCalculating = useResumeEditorStore((state) => state.setScoreCalculating);
 
+  // Hydrate once from localStorage; never clear an already-loaded score here.
   useEffect(() => {
-    const storedScore = getStoredScores(resume.id, scoreSignature);
-    setScoreData(storedScore);
-  }, [resume.id, scoreSignature]);
+    if (scoreData) return;
+    const storedScore = getStoredScores(resume.id);
+    if (storedScore) setScoreData(storedScore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.id]);
 
   const handleRecalculate = async () => {
     if (!selectedModel) {
