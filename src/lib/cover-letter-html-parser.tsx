@@ -131,14 +131,15 @@ export function parseCoverLetterHtml(
       blockStyle.textAlign = textAlign;
     }
 
-    // Apply heading styles
+    // Apply heading styles (reuse the resolved bold font so headings match the selected font)
+    const boldFontFamily = styles.bold.fontFamily ?? 'Helvetica-Bold';
     if (tag === 'h1') {
       blockStyle.fontSize = 18;
-      blockStyle.fontFamily = 'Helvetica-Bold';
+      blockStyle.fontFamily = boldFontFamily;
       blockStyle.marginBottom = 8;
     } else if (tag === 'h2') {
       blockStyle.fontSize = 14;
-      blockStyle.fontFamily = 'Helvetica-Bold';
+      blockStyle.fontFamily = boldFontFamily;
       blockStyle.marginBottom = 6;
     }
 
