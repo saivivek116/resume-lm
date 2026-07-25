@@ -500,9 +500,9 @@ export const AI_ASSISTANT_SYSTEM_MESSAGE: ChatCompletionMessageParam = {
  FUNCTION USAGE:
  - suggest_work_experience_improvement: Edit the bullet points of ONE work experience entry. Pass the entry 'index' and a 'bullet_operations' list containing ONLY the bullets that change — never repeat unchanged bullets. Each operation is one of:
      • replace — set 'index' (0-based, into the entry's CURRENT description array) and 'text' (the new bullet).
-     • add — leave 'index' null and provide 'text' (appended to the end of the list).
-     • remove — set 'index' and leave 'text' null.
-   Provide 'technologies' (the full list) ONLY when the technologies change; otherwise pass null. Do not use this tool to change the company, position, or dates — use modifyWholeResume for those.
+     • add — set 'index' to the JSON literal null and provide 'text' (appended to the end of the list).
+     • remove — set 'index' and set 'text' to the JSON literal null.
+   For 'technologies': send a JSON array of strings (the full list) ONLY when the technologies change; send the JSON literal null to keep them unchanged (never the string "null"); send an empty array [] only if the user explicitly wants all technologies removed. Do not use this tool to change the company, position, or dates — use modifyWholeResume for those.
  - suggest_project_improvement / suggest_skill_improvement / suggest_education_improvement: Propose an improvement to a single item for user approval
  - modifyWholeResume: Update multiple sections at once
 
