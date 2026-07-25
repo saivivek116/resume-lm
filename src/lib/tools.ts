@@ -9,14 +9,14 @@ export const suggestWorkExperienceTool = createTool({
     bullet_operations: z.array(z.object({
       operation: z.enum(['replace', 'add', 'remove']),
       index: z.number().nullable().describe(
-        'For replace/remove: the 0-based index of the existing bullet in the CURRENT description array. null for add.'
+        'For "replace"/"remove": the 0-based integer index of the existing bullet in the CURRENT description array. For "add": send the JSON literal null (an actual null value, NOT the text "null").'
       ),
       text: z.string().nullable().describe(
-        'For replace/add: the new bullet text (use **keyword** for emphasis). null for remove.'
+        'For "replace"/"add": the new bullet text as a string (use **keyword** for emphasis). For "remove": send the JSON literal null (an actual null value, NOT the text "null").'
       ),
     })).describe('Sparse list of bullet changes. Include only bullets that change.'),
     technologies: z.array(z.string()).nullable().describe(
-      'Provide the full technologies list ONLY when it changes; otherwise null.'
+      'The technologies for this experience. Send ONE of exactly three things: (1) a JSON array of strings, e.g. ["React","Node.js"], to replace the technologies with this exact list — do this ONLY when they change; (2) the JSON literal null (an actual null value, NOT the text "null") to keep the existing technologies unchanged — this is the correct value when nothing changes; (3) an empty array [] ONLY if the user explicitly wants all technologies removed (this is destructive). Never send the string "null", and never send [] to mean "unchanged".'
     ),
   }),
 });
