@@ -54,3 +54,6 @@ next-env.d.ts
 
 # claude code local settings (personal, not shared)
 .claude/settings.local.json
+
+# temp output from scripts/verify-tool-schemas.mjs
+.schema-check-*/

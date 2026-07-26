@@ -10,7 +10,7 @@ import { Message } from 'ai';
 import { cn, withBasePath } from '@/lib/utils';
 import { ToolInvocation } from 'ai';
 import { MemoizedMarkdown } from '@/components/ui/memoized-markdown';
-import { Suggestion, applyBulletOperations } from './suggestions';
+import { Suggestion, applyBulletOperations, mergeTechnologies } from './suggestions';
 import { SuggestionSkeleton } from './suggestion-skeleton';
 import ChatInput from './chat-input';
 import { LoadingDots } from '@/components/ui/loading-dots';
@@ -436,10 +436,6 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                         {/* Tool Invocations as Separate Bubbles */}
                         {m.toolInvocations?.map((toolInvocation: ToolInvocation) => {
                           const { toolName, toolCallId, state, args } = toolInvocation;
-                          // TEMP: validate AI only emits changed bullets. Remove after testing.
-                          if (state === 'result' && toolName === 'suggest_work_experience_improvement') {
-                            console.log('[work-exp tool args]', JSON.stringify(args, null, 2));
-                          }
                           switch (state) {
                             case 'partial-call':
                             case 'call':
@@ -487,18 +483,22 @@ export default function ChatBot({ resume, onResumeChange, job }: ChatBotProps) {
                               if (toolName === 'suggest_work_experience_improvement') {
                                 const currentWork = resume.work_experience[args.index];
                                 if (!currentWork) return null;
+                                // `args.technologies` is an additive delta, so the card and the
+                                // accept handler both work off the merged list.
+                                const mergedTechnologies = mergeTechnologies(currentWork.technologies, args.technologies);
                                 return (
                                   <div key={toolCallId} className="mt-2 w-[90%]">
                                     <Suggestion
                                       type="work_experience"
                                       currentContent={currentWork}
                                       operations={args.bullet_operations}
-                                      technologies={args.technologies}
+                                      technologies={mergedTechnologies}
                                       onAccept={() => {
+                                        const nextDescription = applyBulletOperations(currentWork.description, args.bullet_operations);
                                         const updated = {
                                           ...currentWork,
-                                          description: applyBulletOperations(currentWork.description, args.bullet_operations),
-                                          technologies: args.technologies ?? currentWork.technologies,
+                                          description: nextDescription,
+                                          technologies: mergedTechnologies,
                                         };
                                         onResumeChange('work_experience',
                                           resume.work_experience.map((item: WorkExperience, i: number) =>
