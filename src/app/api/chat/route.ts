@@ -99,11 +99,12 @@ export async function POST(req: Request) {
            * 'index' (number): which work_experience entry to edit
            * 'bullet_operations' (array): include ONLY the bullets that change. Each item has:
                - 'operation': "replace" | "add" | "remove"
-               - 'index': the 0-based bullet index for "replace"/"remove"; the JSON literal null for "add"
-               - 'text': the new bullet text for "replace"/"add"; the JSON literal null for "remove"
-           * 'technologies': a JSON array of strings = the full replacement list (only when it changes);
-             the JSON literal null = keep the existing technologies unchanged (NEVER the string "null");
-             an empty array [] = remove all technologies (destructive — only if the user explicitly asks)
+               - 'index': the 0-based bullet position for "replace"/"remove"; -1 for "add",
+                 since added bullets are appended at the end
+               - 'text': the new bullet text for "replace"/"add"; an empty string for "remove"
+           * 'technologies' (array of strings): technologies to ADD to this entry.
+             Use an empty array [] when there are none to add. Only list technologies
+             the entry does not already have — they are appended, not replaced.
          - Do NOT invent other fields (there is no 'improved_experience'); do NOT resend unchanged bullets
 
       2. For project improvements:

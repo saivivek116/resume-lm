@@ -7,7 +7,8 @@
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "verify:schemas": "node scripts/verify-tool-schemas.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.6",
@@ -133,7 +134,8 @@
     "postcss": "^8.4.49",
     "remark-gfm": "^4.0.1",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "zod-to-json-schema": "^3.25.2"
   },
   "engines": {
     "node": ">=20.0.0"

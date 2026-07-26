@@ -99,7 +99,7 @@ function WorkExperienceSuggestion({ currentContent: currentWork, operations, tec
           </div>
         ))}
       </div>
-      {technologies && (
+      {technologies && technologies.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">
           {technologies.map((tech, index) => (
             <span
@@ -445,8 +445,11 @@ function isNewItem<T>(current: T[] | undefined, suggested: T[] | undefined, item
 // CURRENT description array; adds are appended at the end so indices never shift.
 export interface BulletOperation {
   operation: 'replace' | 'add' | 'remove';
-  index: number | null;
-  text: string | null;
+  // Position of the bullet in the CURRENT description array. Adds use -1, which
+  // isValidIndex rejects, since they are appended rather than positioned.
+  index: number;
+  // Empty for removes.
+  text: string;
 }
 
 // Render model for the suggestion card: current bullets in order (tagged),
@@ -457,8 +460,12 @@ export type BulletRow =
   | { kind: 'removed'; text: string }
   | { kind: 'added'; text: string };
 
-function isValidIndex(idx: number | null, length: number): idx is number {
-  return idx !== null && Number.isInteger(idx) && idx >= 0 && idx < length;
+function isValidIndex(idx: number, length: number): boolean {
+  return Number.isInteger(idx) && idx >= 0 && idx < length;
+}
+
+function hasText(text: string): boolean {
+  return text.trim() !== '';
 }
 
 export function buildBulletRows(current: string[], ops: BulletOperation[]): BulletRow[] {
@@ -467,7 +474,7 @@ export function buildBulletRows(current: string[], ops: BulletOperation[]): Bull
   const removed = new Set<number>();
 
   for (const op of ops) {
-    if (op.operation === 'replace' && isValidIndex(op.index, current.length) && op.text !== null) {
+    if (op.operation === 'replace' && isValidIndex(op.index, current.length) && hasText(op.text)) {
       replacements.set(op.index, op.text);
       removed.delete(op.index);
     } else if (op.operation === 'remove' && isValidIndex(op.index, current.length)) {
@@ -484,7 +491,7 @@ export function buildBulletRows(current: string[], ops: BulletOperation[]): Bull
   });
 
   for (const op of ops) {
-    if (op.operation === 'add' && op.text !== null) {
+    if (op.operation === 'add' && hasText(op.text)) {
       rows.push({ kind: 'added', text: op.text });
     }
   }
@@ -497,6 +504,23 @@ export function applyBulletOperations(current: string[], ops: BulletOperation[])
   return rows
     .filter((row) => row.kind !== 'removed')
     .map((row) => row.text);
+}
+
+// The tool returns technologies as an ADDITIVE delta, so merge rather than
+// replace: keep the existing list and order, and append only what is genuinely
+// new (compared case-insensitively, since the model rarely matches casing).
+export function mergeTechnologies(current: string[] | undefined, additions: string[]): string[] {
+  const merged = [...(current ?? [])];
+  const seen = new Set(merged.map((tech) => tech.trim().toLowerCase()));
+
+  for (const addition of additions) {
+    const key = addition.trim().toLowerCase();
+    if (key === '' || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(addition.trim());
+  }
+
+  return merged;
 }
 
 // const renderBoldText = (text: string) => {

@@ -16,7 +16,9 @@
       "Bash(git push:*)",
       "WebFetch(domain:openrouter.ai)",
       "Bash(npx tsc *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(gh run *)",
+      "Bash(gh secret *)"
     ],
     "deny": [
       "Bash(git push origin main)",
