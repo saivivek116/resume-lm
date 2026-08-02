@@ -38,6 +38,12 @@ export interface ResumeEditorActions {
   setScoreCalculating: (value: boolean) => void;
   /** Mark the current resume as the saved baseline (clears `hasUnsavedChanges`). */
   markSaved: (savedResume?: Resume) => void;
+  /**
+   * Swap in a resume that was persisted server-side (e.g. an AI regeneration), making it
+   * both the live resume and the saved baseline. Unlike {@link markSaved} this replaces
+   * the content itself, so no follow-up auto-save is triggered.
+   */
+  replaceResume: (resume: Resume) => void;
 }
 
 export type ResumeEditorStore = ResumeEditorState & ResumeEditorActions;
@@ -134,6 +140,8 @@ export function createResumeEditorStore(initialResume: Resume) {
             hasUnsavedChanges: hasChanges(state.resume, baseline),
           };
         }),
+      replaceResume: (resume) =>
+        set({ resume, initialResume: resume, hasUnsavedChanges: false }),
     };
   });
 }

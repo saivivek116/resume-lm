@@ -1,11 +1,12 @@
 'use client';
 
-import { Resume } from "@/lib/types";
+import { Job, Resume } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Save } from "lucide-react";
+import { Download, Loader2, RefreshCw, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { pdf } from '@react-pdf/renderer';
 import { TextImport } from "../../text-import";
+import { RegenerateResumeDialog } from "../dialogs/regenerate-resume-dialog";
 import { ResumePDFDocument } from "../preview/resume-pdf-document";
 import { CoverLetterPDFDocument } from "@/components/cover-letter/cover-letter-pdf-document";
 import { generateResumeDocx } from "@/lib/docx/resume-docx";
@@ -21,21 +22,29 @@ import { useState } from "react";
 
 interface ResumeEditorActionsProps {
   onResumeChange: (field: keyof Resume, value: Resume[keyof Resume]) => void;
+  /** The job this resume is tailored to, if any. Required to offer regeneration. */
+  job?: Job | null;
 }
 
 export function ResumeEditorActions({
-  onResumeChange
+  onResumeChange,
+  job
 }: ResumeEditorActionsProps) {
   const resume = useResumeEditorStore((s) => s.resume);
   const isSaving = useResumeEditorStore((s) => s.isSaving);
   const hasUnsavedChanges = useResumeEditorStore((s) => s.hasUnsavedChanges);
   const setSaving = useResumeEditorStore((s) => s.setSaving);
   const markSaved = useResumeEditorStore((s) => s.markSaved);
+  const replaceResume = useResumeEditorStore((s) => s.replaceResume);
   const [downloadOptions, setDownloadOptions] = useState({
     resume: true,
     coverLetter: true
   });
   const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'word'>('pdf');
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+
+  // Regeneration re-tailors against a linked job, so it only applies to tailored resumes.
+  const canRegenerate = !resume.is_base_resume && !!resume.job_id && !!job;
 
   // Save Resume
   const handleSave = async () => {
@@ -127,7 +136,11 @@ export function ResumeEditorActions({
           {saveStatus}
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className={cn(
+        "grid gap-2",
+        // Four buttons are too cramped in a narrow editor panel, so wrap to two rows.
+        canRegenerate ? "grid-cols-2 @md:grid-cols-4" : "grid-cols-3"
+      )}>
         {/* Text Import Button */}
         <TextImport
           resume={resume}
@@ -275,7 +288,28 @@ export function ResumeEditorActions({
             </>
           )}
         </Button>
+
+        {/* Regenerate Button (tailored resumes with a linked job only) */}
+        {canRegenerate && (
+          <Button
+            onClick={() => setShowRegenerateDialog(true)}
+            className={actionButtonClasses}
+          >
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+            Regenerate
+          </Button>
+        )}
       </div>
+
+      {canRegenerate && job && (
+        <RegenerateResumeDialog
+          open={showRegenerateDialog}
+          onOpenChange={setShowRegenerateDialog}
+          resume={resume}
+          job={job}
+          onRegenerated={replaceResume}
+        />
+      )}
     </div>
   );
-} 
+}

@@ -386,6 +386,105 @@ export async function createTailoredResume(
   return data;
 }
 
+/**
+ * Re-runs tailoring for a resume that already exists, overwriting it in place.
+ *
+ * Unlike {@link createTailoredResume} this is an UPDATE, so the resume keeps its id,
+ * URL and quota footprint — which is also why `assertResumeQuota` is deliberately not
+ * called here (the resume count is unchanged, and a user at their limit must still be
+ * able to regenerate a resume they already own).
+ *
+ * Formatting (`document_settings`, `section_order`, `section_configs`), the title and
+ * the contact fields are preserved; the AI-generated content is replaced. Any existing
+ * cover letter is dropped because it was written against the previous content.
+ */
+export async function regenerateTailoredResume(
+  resumeId: string,
+  baseResume: Resume,
+  tailoredContent: z.infer<typeof simplifiedResumeSchema>
+): Promise<Resume> {
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('resumes')
+    .select('job_id, is_base_resume')
+    .eq('id', resumeId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (existingError || !existing) {
+    throw new Error('Resume not found');
+  }
+
+  if (existing.is_base_resume) {
+    throw new Error('Only tailored resumes can be regenerated');
+  }
+
+  // Fetch the linked job so the summary can be aligned to the job description.
+  let jobForSummary: {
+    description: string | null;
+    keywords: string[] | null;
+    position_title: string | null;
+    company_name: string | null;
+  } | null = null;
+
+  if (existing.job_id) {
+    const { data: jobRow } = await supabase
+      .from('jobs')
+      .select('description, keywords, position_title, company_name')
+      .eq('id', existing.job_id)
+      .maybeSingle();
+    if (jobRow) jobForSummary = jobRow;
+  }
+
+  // Best-effort AI summary; failure must not block the regeneration.
+  let professionalSummary: string | null = null;
+  try {
+    professionalSummary = await generateProfessionalSummary({
+      profile: {
+        work_experience: (tailoredContent.work_experience ?? baseResume.work_experience ?? []) as WorkExperience[],
+        skills: (tailoredContent.skills ?? baseResume.skills ?? []) as Skill[],
+        projects: (tailoredContent.projects ?? baseResume.projects ?? []) as Project[],
+        education: (tailoredContent.education ?? baseResume.education ?? []) as Education[],
+        certifications: baseResume.certifications ?? [],
+      },
+      job: {
+        position_title: jobForSummary?.position_title ?? baseResume.target_role ?? '',
+        company_name: jobForSummary?.company_name ?? null,
+        description: jobForSummary?.description ?? null,
+        keywords: jobForSummary?.keywords ?? null,
+      },
+    });
+  } catch (summaryError) {
+    console.warn('[regenerateTailoredResume] professional summary generation failed:', summaryError);
+  }
+
+  const { data, error } = await supabase
+    .from('resumes')
+    .update({
+      ...tailoredContent,
+      professional_summary: professionalSummary,
+      certifications: baseResume.certifications ?? [],
+      has_cover_letter: false,
+      cover_letter: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', resumeId)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Resume regeneration failed: No data returned');
+
+  return data;
+}
+
 export async function copyResume(resumeId: string): Promise<Resume> {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();

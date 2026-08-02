@@ -4,7 +4,7 @@ import { bulletList, intOr, optionalOf, optionalText, stringList, textOrEmpty } 
 
 export const suggestWorkExperienceTool = createTool({
   description:
-    'Suggest changes to the bullet points of ONE work experience entry. Emit ONLY the bullets you are changing — never repeat unchanged bullets. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.',
+    'Suggest changes to the bullet points of ONE work experience entry. Emit ONLY the bullets you are changing — never repeat unchanged bullets. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase. Always bold quantifiable metrics (numbers, percentages, revenue/cost figures, counts of systems/microservices/components, etc.) so they stand out to recruiters.',
   parameters: z.object({
     index: intOr(0).describe('Index of the work experience entry to edit'),
     bullet_operations: z.array(z.object({
@@ -33,7 +33,7 @@ export const suggestProjectTool = createTool({
       technologies: stringList,
       url: textOrEmpty,
       github_url: textOrEmpty,
-    }).describe('Improved version of the project entry. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.'),
+    }).describe('Improved version of the project entry. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase. Always bold quantifiable metrics (numbers, percentages, revenue/cost figures, counts of systems/microservices/components, etc.) so they stand out to recruiters.'),
   }),
 });
 
@@ -76,7 +76,7 @@ export const suggestProfessionalSummaryTool = createTool({
 });
 
 export const modifyWholeResumeTool = createTool({
-  description: 'Modify multiple sections of the resume at once. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.',
+  description: 'Modify multiple sections of the resume at once. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase. Always bold quantifiable metrics (numbers, percentages, revenue/cost figures, counts of systems/microservices/components, etc.) so they stand out to recruiters.',
   parameters: z.object({
     // Every section is "omit to leave unchanged" — a section that is absent (or
     // that the model mangles) must never overwrite what the resume already has.

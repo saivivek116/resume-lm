@@ -60,6 +60,7 @@ export function EditorPanel({
               <div className="flex flex-col gap-4">
                 <ResumeEditorActions
                   onResumeChange={onResumeChange}
+                  job={job}
                 />
               </div>
             </div>
