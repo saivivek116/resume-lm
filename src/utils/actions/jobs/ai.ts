@@ -99,6 +99,7 @@ TAILORING STRATEGY
    - Active voice only. No personal pronouns.
    - Bold the key technologies, frameworks, and tools inline using markdown bold.
    - Quantify with realistic, role-appropriate metrics: latency reduction, throughput, user counts, cost savings, conversion lift, test coverage, deployment frequency, incident reduction, adoption rate. Metrics must be plausible for the role's scope.
+   - Bold every quantifiable metric in the bullet (numbers, percentages, revenue/cost figures, latency/throughput values, counts of systems/microservices/components, team size, time saved) using markdown bold so these achievements stand out to recruiters.
    - Bullet count: Keep all bullets that meet at least one of these criteria: (a) demonstrates a JD-protected technology, (b) contains a quantified metric or impact, (c) directly maps to a core JD responsibility. Drop only bullets that meet none of these criteria and are completely irrelevant to the JD's domain. Aim for conciseness, but never sacrifice a relevant bullet to hit a number.
    - Lead each role with the bullet most aligned to the JD's top responsibility.
 

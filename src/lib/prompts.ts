@@ -488,6 +488,7 @@ export const AI_ASSISTANT_SYSTEM_MESSAGE: ChatCompletionMessageParam = {
  2. CONTENT QUALITY
     - Focus on achievements
     - Use metrics when available
+    - Bold every quantifiable metric (numbers, percentages, revenue/cost figures, counts of systems/microservices/components, team size, time saved) using **metric** so it stands out to recruiters
     - Highlight relevant skills
     - Maintain professional tone
  
@@ -607,9 +608,16 @@ export const PROFESSIONAL_SUMMARY_GENERATOR_MESSAGE: ChatCompletionMessageParam 
 OUTPUT FORMAT:
 - A single paragraph of plain text (no markdown, no bullet points, no headings, no bold).
 - 3 to 4 sentences. Target 60 to 90 words total.
-- The FIRST sentence MUST begin with the EXACT opener phrase the user provides, verbatim. Do not rephrase, do not change capitalization, do not add any words before it.
+- The FIRST sentence MUST begin with an opener of the exact shape "<Derived Title> with <N>+ years of experience", built as described below. Do not add any words before it.
 - After the opener phrase, continue the first sentence naturally (e.g., "<OPENER> specializing in ...") or start a new sentence.
-- The opener always states "5+ years of experience". Even if the job description mentions a different number of years (e.g., "8+ years required", "3+ years"), do NOT change the opener — keep "5+ years of experience" exactly as given. Do not restate, contradict, or reference the JD's required years of experience anywhere in the summary.
+
+BUILDING THE OPENER:
+1. Call the getCurrentDate tool FIRST to get today's real date — your training data may be out of date, and you need the real current date to correctly resolve "Present" and compute spans in the candidate's work_experience dates.
+2. Compute the candidate's real total years of professional experience from the work_experience date ranges (reason over whatever free-text date format is given, e.g. "Jan 2023 - Present", "2020 - 2022"; resolve "Present"/ongoing to today's date). Convert each entry to a start/end month, sort them, and merge any ranges that overlap or are directly adjacent into combined spans — do not naively sum each job's duration, since overlapping/concurrent roles would double-count. Then sum the lengths of the resulting merged spans. Do NOT bridge or count gaps where the candidate had no listed role (e.g., time between jobs, career breaks, full-time study) as experience — only the merged spans themselves count, not the earliest-start-to-latest-end range. Round down to a whole number and express as "<N>+ years".
+3. Derive the role title: take the target job's position title and strip any seniority/level qualifier (e.g. Junior, Senior, Sr., Jr., Entry-level, Associate, Lead, Staff, Principal, I/II/III) to get the core role family (e.g. "Software Engineer" from "Junior Software Engineer" or "Software Engineer II").
+4. Choose a seniority qualifier for that role family based on the candidate's real total years of experience and career trajectory (titles held, scope of past roles), judged holistically rather than a rigid cutoff table. NEVER choose a qualifier below the candidate's true seniority just because the job posting implies a lower level — e.g. a candidate with 5 years of experience applying to a "Junior Software Engineer" posting must NOT be labeled "Junior" in the opener.
+5. The derived title must be clean: only the role name, optionally with a single seniority qualifier word (e.g. "Senior Software Engineer", "Software Engineer") — no extra adjectives, filler words, or company name attached.
+6. Do not restate, contradict, or reference the JD's stated years-of-experience requirement anywhere in the summary — only your own computed figure.
 
 TONE & STYLE:
 - Professional, natural, direct — sound like the candidate speaking about their own work, not a recruiter describing them.

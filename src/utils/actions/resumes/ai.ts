@@ -3,7 +3,7 @@
 // import { RESUME_IMPORTER_SYSTEM_MESSAGE, } from "@/lib/prompts";
 import { Profile, Resume } from "@/lib/types";
 import { bulletImpactSortSchema, textImportSchema, workExperienceBulletPointsSchema } from "@/lib/zod-schemas";
-import { generateObject, generateText, type LanguageModelV1 } from "ai";
+import { generateObject, generateText, tool, type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import { initializeAIClient, type AIConfig } from '@/utils/ai-tools';
 import { getDefaultModel } from "@/lib/ai-models";
@@ -334,8 +334,10 @@ export async function sortBulletsByImpact(
 }
 
 // PROFESSIONAL SUMMARY GENERATION (used at tailored-resume creation)
-// Returns a 3-4 sentence summary paragraph that opens with
-// "<position_title> with 5+ years of experience" and is aligned to the JD.
+// Returns a 3-4 sentence summary paragraph that opens with a seniority-adjusted
+// title derived from the job's position title and the candidate's real total
+// years of experience (computed by the model from work_experience dates), e.g.
+// "Software Engineer with 5+ years of experience", aligned to the JD.
 export async function generateProfessionalSummary(
   params: {
     profile: Pick<
@@ -352,8 +354,6 @@ export async function generateProfessionalSummary(
   config?: AIConfig
 ): Promise<string> {
   const aiClient = await initializeAIClient(config ?? { model: getDefaultModel() });
-
-  const opener = `${params.job.position_title} with 5+ years of experience`;
 
   const profileBlob = JSON.stringify(
     {
@@ -380,16 +380,22 @@ export async function generateProfessionalSummary(
   const { text } = await generateText({
     model: aiClient,
     system: PROFESSIONAL_SUMMARY_GENERATOR_MESSAGE.content as string,
-    prompt: `REQUIRED OPENER (use VERBATIM as the start of the first sentence):
-"${opener}"
-
-CANDIDATE PROFILE (source of truth — only reference skills/experience present here):
+    prompt: `CANDIDATE PROFILE (source of truth — only reference skills/experience present here):
 ${profileBlob}
 
 TARGET JOB:
 ${jobBlob}
 
-Write the professional summary paragraph now. 3-4 sentences, 60-90 words, plain text only.`,
+Call getCurrentDate first, then compute the candidate's real years of experience and the seniority-adjusted opener title per your instructions. Write the professional summary paragraph now. 3-4 sentences, 60-90 words, plain text only.`,
+    tools: {
+      getCurrentDate: tool({
+        description:
+          'Returns today\'s real-world date. Call this before computing years of experience or resolving "Present" in work_experience date ranges, since your training data may be outdated.',
+        parameters: z.object({}),
+        execute: async () => new Date().toISOString().split('T')[0],
+      }),
+    },
+    maxSteps: 3,
   });
 
   return text.trim();
