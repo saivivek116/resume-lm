@@ -36,7 +36,6 @@ export default async function SettingsPage() {
         <SettingsContent
           user={user}
           subscriptionStatus={subscriptionStatus}
-          subscriptionSnapshot={subscription}
           theirStackWebhookUrl={theirStackWebhookUrl}
           theirStackHasSecret={!!profile?.theirstack_webhook_secret}
         />

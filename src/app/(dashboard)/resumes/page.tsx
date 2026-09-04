@@ -1,4 +1,4 @@
-import { getDashboardData } from "@/utils/actions";
+import { getResumePage } from "@/utils/actions";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -13,6 +13,11 @@ const RESUMES_PER_PAGE = 12;
 
 type SearchParams = { [key: string]: string | string[] | undefined }
 
+/** A repeated query param (`?page=1&page=2`) arrives as an array. */
+function first(param: string | string[] | undefined): string {
+  return (Array.isArray(param) ? param[0] : param) ?? '';
+}
+
 export default async function ResumesPage({
   searchParams,
 }: {
@@ -20,40 +25,22 @@ export default async function ResumesPage({
 }) {
   const params = await searchParams;
 
-  const { baseResumes, tailoredResumes } = await getDashboardData();
+  const requestedPage = Number(first(params.page)) || 1;
+  const sort = (first(params.sort) as SortOption) || 'createdAt';
+  const direction = (first(params.direction) as SortDirection) || 'desc';
+  const search = first(params.search);
 
-  // Combine and sort resumes
-  const allResumes = [...baseResumes, ...tailoredResumes];
-  const currentPage = Number(params.page) || 1;
-  const sort = (params.sort as SortOption) || 'createdAt';
-  const direction = (params.direction as SortDirection) || 'desc';
-  const search = (params.search as string) || '';
-
-  // Filter by search query
-  const filteredResumes = search
-    ? allResumes.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
-    : allResumes;
-
-  // Sort resumes
-  const sortedResumes = filteredResumes.sort((a, b) => {
-    const modifier = direction === 'asc' ? 1 : -1;
-    switch (sort) {
-      case 'name':
-        return modifier * a.name.localeCompare(b.name);
-      case 'jobTitle':
-        return modifier * (a.target_role?.localeCompare(b.target_role || '') || 0);
-      case 'createdAt':
-      default:
-        return modifier * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    }
+  // Filtering, sorting and paging all happen in SQL, so only one page is ever fetched.
+  const { resumes: paginatedResumes, total, page: currentPage } = await getResumePage({
+    type: 'all',
+    page: requestedPage,
+    pageSize: RESUMES_PER_PAGE,
+    sort,
+    direction,
+    search,
   });
 
-  // Paginate resumes
-  const totalPages = Math.ceil(sortedResumes.length / RESUMES_PER_PAGE);
-  const paginatedResumes = sortedResumes.slice(
-    (currentPage - 1) * RESUMES_PER_PAGE,
-    currentPage * RESUMES_PER_PAGE
-  );
+  const totalPages = Math.ceil(total / RESUMES_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50/50 via-sky-50/50 to-violet-50/50">
@@ -98,6 +85,13 @@ export default async function ResumesPage({
         {/* Resumes Grid */}
         <div className="relative rounded-2xl overflow-hidden backdrop-blur-xl bg-white/40 border border-purple-200/50 shadow-xl">
           <Suspense fallback={<ResumesLoadingSkeleton />}>
+            {paginatedResumes.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground">
+                {search
+                  ? `No resumes match "${search}".`
+                  : 'No resumes yet. Create your first one to get started.'}
+              </div>
+            ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6">
               {paginatedResumes.map((resume) => (
                 <Link href={`/resumes/${resume.id}`} key={resume.id}>
@@ -111,6 +105,7 @@ export default async function ResumesPage({
                 </Link>
               ))}
             </div>
+            )}
           </Suspense>
         </div>
 

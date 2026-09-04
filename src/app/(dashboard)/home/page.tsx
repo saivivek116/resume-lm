@@ -20,15 +20,18 @@ import { WelcomeDialog } from "@/components/dashboard/welcome-dialog";
 import { getGreeting } from "@/lib/utils";
 import { ApiKeyAlert } from "@/components/dashboard/api-key-alert";
 import { type SortOption, type SortDirection } from "@/components/resume/management/resume-sort-controls";
-import type { ResumeSummary } from "@/lib/types";
 import { ResumesSection } from "@/components/dashboard/resumes-section";
-import { getDashboardData } from "@/utils/actions";
-import { checkSubscriptionPlan } from "@/utils/actions/stripe/actions";
-import { FREE_PLAN_RESUME_LIMITS } from "@/lib/resume-limits";
+import { getProfile, getResumePage } from "@/utils/actions";
 
+// Rows fetched per section per request. The dashboard never loads the whole table.
+// Seven, not eight: the grid is four columns and the create-resume card takes the first
+// cell, so 7 + 1 fills exactly two rows.
+const RESUMES_PER_PAGE = 7;
 
-
-
+/** A repeated query param (`?basePage=1&basePage=2`) arrives as an array. */
+function first(param: string | string[] | undefined): string {
+  return (Array.isArray(param) ? param[0] : param) ?? '';
+}
 
 
 
@@ -37,77 +40,54 @@ import { FREE_PLAN_RESUME_LIMITS } from "@/lib/resume-limits";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   // Check if user is coming from confirmation
   const params = await searchParams;
-  const isNewSignup = params?.type === 'signup' && params?.token_hash;
+  const isNewSignup = first(params?.type) === 'signup' && Boolean(params?.token_hash);
+
+  // Per-section list state, all driven by the URL so each section pages independently.
+  const baseSort = (first(params.baseSort) as SortOption) || 'createdAt';
+  const baseDirection = (first(params.baseDirection) as SortDirection) || 'desc';
+  const basePage = Number(first(params.basePage)) || 1;
+  const baseSearch = first(params.baseSearch);
+
+  const tailoredSort = (first(params.tailoredSort) as SortOption) || 'createdAt';
+  const tailoredDirection = (first(params.tailoredDirection) as SortDirection) || 'desc';
+  const tailoredPage = Number(first(params.tailoredPage)) || 1;
+  const tailoredSearch = first(params.tailoredSearch);
 
   // Fetch dashboard data and handle authentication
-  const fallbackSubscription = {
-    plan: '',
-    status: '',
-    currentPeriodEnd: '',
-    trialEnd: '',
-    isTrialing: false,
-    hasProAccess: false,
-  };
-
-  let data;
-  let subscription: Awaited<ReturnType<typeof checkSubscriptionPlan>> = fallbackSubscription;
+  let profile;
+  let basePageResult;
+  let tailoredPageResult;
   try {
-    [data, subscription] = await Promise.all([
-      getDashboardData(),
-      checkSubscriptionPlan().catch(() => fallbackSubscription)
+    [profile, basePageResult, tailoredPageResult] = await Promise.all([
+      getProfile(),
+      getResumePage({
+        type: 'base',
+        page: basePage,
+        pageSize: RESUMES_PER_PAGE,
+        sort: baseSort,
+        direction: baseDirection,
+        search: baseSearch,
+      }),
+      getResumePage({
+        type: 'tailored',
+        page: tailoredPage,
+        pageSize: RESUMES_PER_PAGE,
+        sort: tailoredSort,
+        direction: tailoredDirection,
+        search: tailoredSearch,
+      }),
     ]);
-    if (!data.profile) {
+    if (!profile) {
       redirect("/");
     }
   } catch {
     // Redirect to login if error occurs
     redirect("/");
   }
-
-  const { profile, baseResumes: unsortedBaseResumes, tailoredResumes: unsortedTailoredResumes } = data;
-  const baseResumesCount = unsortedBaseResumes.length;
-  const tailoredResumesCount = unsortedTailoredResumes.length;
-
-  // Get sort parameters for both sections
-  const baseSort = (params.baseSort as SortOption) || 'createdAt';
-  const baseDirection = (params.baseDirection as SortDirection) || 'desc';
-  const tailoredSort = (params.tailoredSort as SortOption) || 'createdAt';
-  const tailoredDirection = (params.tailoredDirection as SortDirection) || 'desc';
-
-  // Sort function
-  function sortResumes(resumes: ResumeSummary[], sort: SortOption, direction: SortDirection) {
-    return [...resumes].sort((a, b) => {
-      const modifier = direction === 'asc' ? 1 : -1;
-      switch (sort) {
-        case 'name':
-          return modifier * a.name.localeCompare(b.name);
-        case 'jobTitle':
-          return modifier * ((a.target_role || '').localeCompare(b.target_role || '') || 0);
-        case 'createdAt':
-        default:
-          return modifier * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-       
-    }
-    });
-  }
-
-
-  // Sort both resume lists
-  const baseResumes = sortResumes(unsortedBaseResumes, baseSort, baseDirection);
-  const tailoredResumes = sortResumes(unsortedTailoredResumes, tailoredSort, tailoredDirection);
-  
-  // Check if user has Pro access (paid, canceling-but-active, or trialing)
-  const isProPlan = subscription.hasProAccess;
-
-  // console.log(subscription);
-  
-  // Free plan limits
-  const canCreateBase = isProPlan || baseResumesCount < FREE_PLAN_RESUME_LIMITS.base;
-  const canCreateTailored = isProPlan || tailoredResumesCount < FREE_PLAN_RESUME_LIMITS.tailored;
 
 
   // Display a friendly message if no profile exists
@@ -153,8 +133,8 @@ export default async function Home({
         <div className="pl-2 sm:pl-0 sm:container sm:max-none  max-w-7xl mx-auto  lg:px-8 md:px-8 sm:px-6 pt-4 ">  
           {/* Profile Overview */}
           <div className="mb-6 space-y-4">
-            {/* API Key Alert */}
-            {!isProPlan && <ApiKeyAlert variant="upgrade" />}
+            {/* API Key Alert (self-hides once the user has configured a provider key) */}
+            <ApiKeyAlert variant="upgrade" />
             
             {/* Greeting & Edit Button */}
             <div className="flex items-center justify-between">
@@ -177,13 +157,17 @@ export default async function Home({
               {/* Base Resumes Section */}
               <ResumesSection
                 type="base"
-                resumes={baseResumes}
+                resumes={basePageResult.resumes}
                 profile={profile}
                 sortParam="baseSort"
                 directionParam="baseDirection"
                 currentSort={baseSort}
                 currentDirection={baseDirection}
-                canCreateMore={canCreateBase}
+                pageParam="basePage"
+                searchParam="baseSearch"
+                currentPage={basePageResult.page}
+                pageSize={RESUMES_PER_PAGE}
+                totalCount={basePageResult.total}
               />
 
               {/* Thin Divider */}
@@ -194,14 +178,17 @@ export default async function Home({
               {/* Tailored Resumes Section */}
               <ResumesSection
                 type="tailored"
-                resumes={tailoredResumes}
+                resumes={tailoredPageResult.resumes}
                 profile={profile}
                 sortParam="tailoredSort"
                 directionParam="tailoredDirection"
                 currentSort={tailoredSort}
                 currentDirection={tailoredDirection}
-                baseResumes={baseResumes}
-                canCreateMore={canCreateTailored}
+                pageParam="tailoredPage"
+                searchParam="tailoredSearch"
+                currentPage={tailoredPageResult.page}
+                pageSize={RESUMES_PER_PAGE}
+                totalCount={tailoredPageResult.total}
               />
             </div>
           </div>

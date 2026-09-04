@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getDashboardData } from "@/utils/actions";
+import { getProfile } from "@/utils/actions";
 import { ProfileEditForm } from "@/components/profile/profile-edit-form";
 import { Suspense } from "react";
 import { hasApiKey } from "@/utils/actions/api-keys/actions";
@@ -10,15 +10,13 @@ export const revalidate = 0;
 
 export default async function EditProfilePage() {
   // Fetch profile data and handle authentication
-  let data;
+  let profile;
   try {
-    data = await getDashboardData();
+    profile = await getProfile();
   } catch (error: unknown) {
     void error
     redirect("/");
   }
-
-  const { profile } = data;
 
   // Display a friendly message if no profile exists
   if (!profile) {

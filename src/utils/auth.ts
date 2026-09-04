@@ -1,9 +1,19 @@
+import { cache } from 'react';
 import { headers } from 'next/headers';
 import { createClient } from './supabase/server';
 import AuthCache from './auth-cache';
 
-// Cache the auth check using React cache()
-export async function getAuthenticatedUser() {
+/**
+ * Resolves the current user, memoised for the lifetime of one request.
+ *
+ * `supabase.auth.getUser()` is a network call to the auth server, not a local JWT decode,
+ * and a single render can need the user several times over — the dashboard resolves the
+ * profile and both resume sections in parallel. React's `cache()` collapses those into
+ * one call. The `AuthCache` below is a second layer that only engages when something
+ * upstream sets `x-request-id`; nothing in this app does today, so `cache()` is what
+ * actually does the deduplication.
+ */
+export const getAuthenticatedUser = cache(async () => {
   const headersList = await headers();
   const requestId = headersList.get('x-request-id');
   const userId = headersList.get('x-user-id');
@@ -37,7 +47,7 @@ export async function getAuthenticatedUser() {
   }
 
   return user;
-}
+});
 
 // Helper to get user ID with error handling
 export const getUserId = async () => {

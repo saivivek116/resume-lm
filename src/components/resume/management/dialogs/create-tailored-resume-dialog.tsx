@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDefaultModel } from "@/hooks/use-api-keys";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Profile, ResumeSummary } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, Plus, Brain, Copy } from "lucide-react";
+import { Loader2, Sparkles, Plus, Brain, Copy, AlertTriangle } from "lucide-react";
+import { getBaseResumeOptions } from "@/utils/actions";
 import { createTailoredResume, getResumeById } from "@/utils/actions/resumes/actions";
 import { CreateBaseResumeDialog } from "./create-base-resume-dialog";
 import { tailorResumeToJob, formatJobListing, checkJobEligibility } from "@/utils/actions/jobs/ai";
@@ -27,10 +28,21 @@ interface CreateTailoredResumeDialogProps {
   profile?: Profile;
 }
 
-export function CreateTailoredResumeDialog({ children, baseResumes, profile }: CreateTailoredResumeDialogProps) {
+/** 'idle' only ever shows before the first open; the dialog loads its list on open. */
+type BaseResumesStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export function CreateTailoredResumeDialog({ children, baseResumes: initialBaseResumes, profile }: CreateTailoredResumeDialogProps) {
   const { defaultModel } = useDefaultModel();
   const [open, setOpen] = useState(false);
-  const [selectedBaseResume, setSelectedBaseResume] = useState<string>(baseResumes?.[0]?.id || '');
+  // Loaded when the dialog opens rather than on every dashboard render: the picker is the
+  // only consumer, and eager-loading cost the page an extra query it usually never used.
+  const [baseResumes, setBaseResumes] = useState<ResumeSummary[]>(initialBaseResumes ?? []);
+  const [baseResumesStatus, setBaseResumesStatus] = useState<BaseResumesStatus>(
+    initialBaseResumes?.length ? 'ready' : 'idle'
+  );
+  // Bumped by the retry button to re-run the load effect.
+  const [reloadToken, setReloadToken] = useState(0);
+  const [selectedBaseResume, setSelectedBaseResume] = useState<string>(initialBaseResumes?.[0]?.id || '');
   const [jobDescription, setJobDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState<CreationStep>('analyzing');
@@ -286,6 +298,29 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
     }
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    // A re-open with a list already in hand refreshes in the background instead of
+    // flashing a spinner over resumes the user can already see.
+    setBaseResumesStatus((current) => (current === 'ready' ? current : 'loading'));
+    getBaseResumeOptions()
+      .then((resumes) => {
+        if (cancelled) return;
+        setBaseResumes(resumes);
+        setSelectedBaseResume((current) => current || resumes[0]?.id || '');
+        setBaseResumesStatus('ready');
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Failed to load base resumes:', error);
+        setBaseResumesStatus('error');
+      });
+
+    return () => { cancelled = true; };
+  }, [open, reloadToken]);
+
   // Reset form when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -293,7 +328,10 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
       setJobDescription('');
       setDialogStep(1);
       setImportOption('ai');
-      setSelectedBaseResume(baseResumes?.[0]?.id || '');
+      setSelectedBaseResume(baseResumes[0]?.id || '');
+      // Set here as well as in the effect: effects run after paint, so without this the
+      // first painted frame would show the "no base resumes" state before the spinner.
+      setBaseResumesStatus((current) => (current === 'ready' ? current : 'loading'));
     } else {
       setIsCheckingEligibility(false);
     }
@@ -340,40 +378,13 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
     await proceedWithCreate();
   };
 
-  if (!baseResumes || baseResumes.length === 0) {
-    return (
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-          {children}
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200 shadow-lg rounded-lg">
-          <div className="flex flex-col items-center justify-center p-8 space-y-4">
-            <div className="p-3 rounded-lg bg-pink-50 border border-pink-100">
-              <Sparkles className="w-6 h-6 text-pink-600" />
-            </div>
-            <div className="text-center space-y-2 max-w-sm">
-              <h3 className="font-semibold text-lg text-gray-900">No Base Resumes Found</h3>
-              <p className="text-sm text-gray-600">
-                You need to create a base resume first before you can create a tailored version.
-              </p>
-            </div>
-            {profile ? (
-              <CreateBaseResumeDialog profile={profile}>
-                <Button className="mt-2 bg-purple-600 hover:bg-purple-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Base Resume
-                </Button>
-              </CreateBaseResumeDialog>
-            ) : (
-              <Button disabled className="mt-2">
-                No profile available to create base resume
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  // The list arrives after the dialog is already open, so loading, empty, error and ready
+  // are rendered as *content* inside one persistent <Dialog>. Returning a differently
+  // shaped tree for any of them changes the root element type mid-interaction, which makes
+  // React tear down and rebuild the whole Radix subtree — and the dialog closes itself.
+  const isLoadingBaseResumes = baseResumesStatus === 'loading';
+  const hasLoadFailed = baseResumesStatus === 'error';
+  const showWizard = !isLoadingBaseResumes && !hasLoadFailed && baseResumes.length > 0;
 
   return (
     <>
@@ -381,7 +392,10 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
         <DialogTrigger asChild>
           {children}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[800px] p-0 max-h-[90vh] overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-lg">
+        <DialogContent className={cn(
+          "p-0 max-h-[90vh] overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-lg",
+          showWizard ? "sm:max-w-[800px]" : "sm:max-w-[500px]"
+        )}>
           <style jsx global>{`
             @keyframes shake {
               0%, 100% { transform: translateX(0); }
@@ -404,39 +418,101 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
                   Create Tailored Resume
                 </DialogTitle>
                 <DialogDescription className="text-sm text-gray-600">
-                  {dialogStep === 1 
-                    ? "Choose a base resume to start with"
-                    : "Configure job details and tailoring method"
+                  {isLoadingBaseResumes
+                    ? "Loading your base resumes"
+                    : hasLoadFailed
+                      ? "We couldn't load your base resumes"
+                      : !showWizard
+                        ? "A base resume is required to tailor from"
+                        : dialogStep === 1
+                          ? "Choose a base resume to start with"
+                          : "Configure job details and tailoring method"
                   }
                 </DialogDescription>
               </div>
               {/* Step indicator */}
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                  dialogStep >= 1 ? "bg-pink-600 text-white" : "bg-gray-200 text-gray-600"
-                )}>
-                  1
+              {showWizard && (
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                    dialogStep >= 1 ? "bg-pink-600 text-white" : "bg-gray-200 text-gray-600"
+                  )}>
+                    1
+                  </div>
+                  <div className={cn(
+                    "w-4 h-0.5",
+                    dialogStep >= 2 ? "bg-pink-600" : "bg-gray-200"
+                  )} />
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                    dialogStep >= 2 ? "bg-pink-600 text-white" : "bg-gray-200 text-gray-600"
+                  )}>
+                    2
+                  </div>
                 </div>
-                <div className={cn(
-                  "w-4 h-0.5",
-                  dialogStep >= 2 ? "bg-pink-600" : "bg-gray-200"
-                )} />
-                <div className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                  dialogStep >= 2 ? "bg-pink-600 text-white" : "bg-gray-200 text-gray-600"
-                )}>
-                  2
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Content */}
-          <div className="px-6 py-2 min-h-[400px] relative">
+          <div className={cn("px-6 py-2 relative", showWizard && "min-h-[400px]")}>
             {isCreating && <LoadingOverlay currentStep={currentStep} />}
-            
-            {dialogStep === 1 && (
+
+            {isLoadingBaseResumes && (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                <Loader2 className="w-6 h-6 text-pink-600 animate-spin" />
+                <p className="text-sm text-gray-600">Loading your base resumes...</p>
+              </div>
+            )}
+
+            {hasLoadFailed && (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <div className="text-center space-y-2 max-w-sm">
+                  <h3 className="font-semibold text-lg text-gray-900">Couldn&apos;t Load Base Resumes</h3>
+                  <p className="text-sm text-gray-600">
+                    Something went wrong while fetching your base resumes. Check your connection and try again.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="mt-2"
+                  onClick={() => setReloadToken((token) => token + 1)}
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {!isLoadingBaseResumes && !hasLoadFailed && baseResumes.length === 0 && (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                <div className="p-3 rounded-lg bg-pink-50 border border-pink-100">
+                  <Sparkles className="w-6 h-6 text-pink-600" />
+                </div>
+                <div className="text-center space-y-2 max-w-sm">
+                  <h3 className="font-semibold text-lg text-gray-900">No Base Resumes Found</h3>
+                  <p className="text-sm text-gray-600">
+                    You need to create a base resume first before you can create a tailored version.
+                  </p>
+                </div>
+                {profile ? (
+                  <CreateBaseResumeDialog profile={profile}>
+                    <Button className="mt-2 bg-purple-600 hover:bg-purple-700 text-white">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Base Resume
+                    </Button>
+                  </CreateBaseResumeDialog>
+                ) : (
+                  <Button disabled className="mt-2">
+                    No profile available to create base resume
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {showWizard && dialogStep === 1 && (
               <div className="space-y-6">
                 {/* Header Section */}
                 <div className="text-center space-y-2">
@@ -462,7 +538,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
               </div>
             )}
 
-            {dialogStep === 2 && (
+            {showWizard && dialogStep === 2 && (
               <div className="space-y-6">
 
                 {/* Selected Resume Summary */}
@@ -589,7 +665,7 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
           <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
             <div className="flex justify-between">
               <div>
-                {dialogStep === 2 && (
+                {showWizard && dialogStep === 2 && (
                   <Button variant="outline" onClick={handleBack} size="sm">
                     Back
                   </Button>
@@ -599,12 +675,12 @@ export function CreateTailoredResumeDialog({ children, baseResumes, profile }: C
                 <Button variant="outline" onClick={() => setOpen(false)} size="sm">
                   Cancel
                 </Button>
-                {dialogStep === 1 && (
+                {showWizard && dialogStep === 1 && (
                   <Button onClick={handleNext} size="sm" className="bg-pink-600 hover:bg-pink-700">
                     Next
                   </Button>
                 )}
-                {dialogStep === 2 && (
+                {showWizard && dialogStep === 2 && (
                   <Button
                     onClick={handleCreate}
                     disabled={isCreating || isCheckingEligibility}

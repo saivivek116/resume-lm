@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { AlertTriangle, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { getResumeById, regenerateTailoredResume } from "@/utils/actions/resumes/actions";
 import { tailorResumeToJob } from "@/utils/actions/jobs/ai";
-import { getDashboardData } from "@/utils/actions";
+import { getBaseResumeOptions } from "@/utils/actions";
 import { BaseResumeSelector } from "../../management/base-resume-selector";
 import { LoadingOverlay, type CreationStep } from "../../management/loading-overlay";
 import { ApiErrorDialog } from "@/components/ui/api-error-dialog";
@@ -84,11 +84,11 @@ export function RegenerateResumeDialog({
     if (!open) return;
 
     let cancelled = false;
-    getDashboardData()
-      .then((data) => {
+    getBaseResumeOptions()
+      .then((resumes) => {
         if (cancelled) return;
-        setBaseResumes(data.baseResumes);
-        setSelectedBaseResume((current) => current || data.baseResumes[0]?.id || '');
+        setBaseResumes(resumes);
+        setSelectedBaseResume((current) => current || resumes[0]?.id || '');
       })
       .catch((error) => {
         if (cancelled) return;

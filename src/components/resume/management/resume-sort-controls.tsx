@@ -22,19 +22,22 @@ const sortOptions = [
 interface ResumeSortControlsProps {
   sortParam?: string;
   directionParam?: string;
+  /** Reset back to page 1 when the ordering changes, since paging happens server-side. */
+  pageParam?: string;
   currentSort?: SortOption;
   currentDirection?: SortDirection;
 }
 
-export function ResumeSortControls({ 
+export function ResumeSortControls({
   sortParam = 'sort',
   directionParam = 'direction',
+  pageParam = 'page',
   currentSort: propCurrentSort,
   currentDirection: propCurrentDirection
 }: ResumeSortControlsProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   const currentSort = propCurrentSort || (searchParams.get(sortParam) as SortOption) || 'createdAt'
   const direction = propCurrentDirection || (searchParams.get(directionParam) as SortDirection) || 'desc'
 
@@ -42,15 +45,19 @@ export function ResumeSortControls({
     const params = new URLSearchParams(searchParams)
     params.set(sortParam, sort)
     if (sort !== currentSort) {
-      params.set(directionParam, 'asc')
+      // Dates read newest-first; text reads A-Z. Defaulting everything to 'asc' meant
+      // picking "Date Created" showed the oldest resumes.
+      params.set(directionParam, sort === 'createdAt' ? 'desc' : 'asc')
     }
-    router.push(`?${params.toString()}`)
+    params.delete(pageParam)
+    router.push(`?${params.toString()}`, { scroll: false })
   }
 
   function toggleDirection() {
     const params = new URLSearchParams(searchParams)
     params.set(directionParam, direction === 'asc' ? 'desc' : 'asc')
-    router.push(`?${params.toString()}`)
+    params.delete(pageParam)
+    router.push(`?${params.toString()}`, { scroll: false })
   }
 
   return (

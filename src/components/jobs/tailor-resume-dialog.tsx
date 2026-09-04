@@ -6,7 +6,7 @@ import { useDefaultModel } from "@/hooks/use-api-keys";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles, MapPin, Building2 } from "lucide-react";
-import { getDashboardData } from "@/utils/actions";
+import { getBaseResumeOptions } from "@/utils/actions";
 import { getResumeById, createTailoredResume } from "@/utils/actions/resumes/actions";
 import { tailorResumeToJob, checkJobEligibility } from "@/utils/actions/jobs/ai";
 import { BaseResumeSelector } from "@/components/resume/management/base-resume-selector";
@@ -56,9 +56,9 @@ export function TailorResumeDialog({ job, children }: TailorResumeDialogProps) {
       setSelectedBaseResume('');
       setIsBaseResumeInvalid(false);
       setIsFetchingResumes(true);
-      getDashboardData().then(data => {
-        setBaseResumes(data.baseResumes);
-        setSelectedBaseResume(data.baseResumes[0]?.id || '');
+      getBaseResumeOptions().then(resumes => {
+        setBaseResumes(resumes);
+        setSelectedBaseResume(resumes[0]?.id || '');
       }).finally(() => setIsFetchingResumes(false));
     } else {
       setIsCheckingEligibility(false);

@@ -57,3 +57,12 @@ next-env.d.ts
 
 # temp output from scripts/verify-tool-schemas.mjs
 .schema-check-*/
+
+# local Redis snapshots - redis-server writes dump.rdb into its cwd when
+# started without a config file, which breaks startup on older Redis builds
+# that cannot read newer RDB format versions
+dump.rdb
+*.rdb
+appendonlydir/
+appendonly.aof
+*.aof

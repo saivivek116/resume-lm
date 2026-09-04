@@ -1,14 +1,12 @@
 'use client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { SecurityForm } from "./security-form"
-import { SubscriptionSection } from "./subscription-section"
 import { DangerZone } from "./danger-zone"
 import { AiPromptsForm } from "./ai-prompts-form"
 import { User } from "@supabase/supabase-js"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
-import type { SubscriptionSnapshot } from "@/lib/subscription-access"
 import { TheirStackWebhookSection } from "./theirstack-webhook-section"
 
 const sections = [
@@ -22,12 +20,11 @@ const sections = [
 interface SettingsContentProps {
   user: User | null;
   subscriptionStatus: string;
-  subscriptionSnapshot: SubscriptionSnapshot | null;
   theirStackWebhookUrl: string;
   theirStackHasSecret: boolean;
 }
 
-export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot, theirStackWebhookUrl, theirStackHasSecret }: SettingsContentProps) {
+export function SettingsContent({ user, subscriptionStatus, theirStackWebhookUrl, theirStackHasSecret }: SettingsContentProps) {
   const [activeSection, setActiveSection] = useState<string>("security")
 
   useEffect(() => {
@@ -110,7 +107,7 @@ export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot
         </Card>
 
         {/* Subscription Management */}
-        <Card id="subscription" className="border-white/40 shadow-xl shadow-black/5 bg-white/80 backdrop-blur-xl">
+        {/* <Card id="subscription" className="border-white/40 shadow-xl shadow-black/5 bg-white/80 backdrop-blur-xl">
           <CardHeader>
             <CardTitle className="text-xl">Subscription</CardTitle>
             <CardDescription>Manage your subscription and billing settings</CardDescription>
@@ -118,7 +115,7 @@ export function SettingsContent({ user, subscriptionStatus, subscriptionSnapshot
           <CardContent>
             <SubscriptionSection initialProfile={subscriptionSnapshot} />
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* AI Prompts */}
         <Card id="ai-prompts" className="border-white/40 shadow-xl shadow-black/5 bg-white/80 backdrop-blur-xl">

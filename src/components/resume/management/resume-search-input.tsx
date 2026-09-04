@@ -1,42 +1,63 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
-export function ResumeSearchInput() {
+interface ResumeSearchInputProps {
+  /** URL param this input owns, so several inputs can coexist on one page. */
+  searchParam?: string
+  /** Page param reset to 1 whenever the query changes. */
+  pageParam?: string
+  className?: string
+}
+
+export function ResumeSearchInput({
+  searchParam = 'search',
+  pageParam = 'page',
+  className,
+}: ResumeSearchInputProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [value, setValue] = useState(searchParams.get('search') ?? '')
+  const currentQuery = searchParams.get(searchParam) ?? ''
 
-  // Sync if URL param changes externally
+  const [value, setValue] = useState(currentQuery)
+  // The last query this input put into the URL. Navigations that land on it are our own
+  // echo, so adopting them would overwrite whatever the user has typed since.
+  const lastPushed = useRef(currentQuery)
+
+  // Adopt only the URL changes we did not cause: back/forward, or an external link.
   useEffect(() => {
-    setValue(searchParams.get('search') ?? '')
-  }, [searchParams])
-
-  const pushSearch = useCallback(
-    (query: string) => {
-      const params = new URLSearchParams(searchParams)
-      if (query) {
-        params.set('search', query)
-      } else {
-        params.delete('search')
-      }
-      params.delete('page') // reset to page 1
-      router.push(`?${params.toString()}`)
-    },
-    [router, searchParams]
-  )
+    if (currentQuery === lastPushed.current) return
+    lastPushed.current = currentQuery
+    setValue(currentQuery)
+  }, [currentQuery])
 
   // Debounce URL updates
   useEffect(() => {
+    // Nothing to push. Without this the timer also fires on mount and after every
+    // navigation (searchParams changes identity), clearing the page param each time.
+    if (value === currentQuery) return
+
     const timer = setTimeout(() => {
-      pushSearch(value)
+      const params = new URLSearchParams(searchParams)
+      if (value) {
+        params.set(searchParam, value)
+      } else {
+        params.delete(searchParam)
+      }
+      params.delete(pageParam) // reset to page 1
+      lastPushed.current = value
+      // replace, not push: typing a query would otherwise leave one history entry per
+      // debounce, so leaving the search takes as many Back presses as characters typed.
+      router.replace(`?${params.toString()}`, { scroll: false })
     }, 300)
+
     return () => clearTimeout(timer)
-  }, [value, pushSearch])
+  }, [value, currentQuery, searchParams, searchParam, pageParam, router])
 
   return (
     <div className="relative flex items-center">
@@ -45,7 +66,10 @@ export function ResumeSearchInput() {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Search resumes..."
-        className="pl-9 pr-8 h-10 w-56 bg-white/60 border-purple-200/60 focus-visible:ring-purple-400/40"
+        className={cn(
+          'pl-9 pr-8 h-10 w-56 bg-white/60 border-purple-200/60 focus-visible:ring-purple-400/40',
+          className
+        )}
       />
       {value && (
         <Button

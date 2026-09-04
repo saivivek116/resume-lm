@@ -10,49 +10,19 @@ import { generateObject } from "ai";
 import { initializeAIClient } from "@/utils/ai-tools";
 import { resumeScoreSchema } from "@/lib/zod-schemas";
 import { getDefaultModel } from "@/lib/ai-models";
-import { getSubscriptionAccessState } from "@/lib/subscription-access";
 import { generateProfessionalSummary } from "@/utils/actions/resumes/ai";
-import {
-  FREE_PLAN_RESUME_LIMITS,
-  getResumeLimitExceededMessage,
-  type ResumeLimitType,
-} from "@/lib/resume-limits";
 
-async function assertResumeQuota(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  type: ResumeLimitType
-) {
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from('subscriptions')
-    .select('subscription_plan, subscription_status, current_period_end, trial_end, stripe_subscription_id')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (subscriptionError) {
-    throw new Error('Failed to validate subscription access');
-  }
-
-  const accessState = getSubscriptionAccessState(subscription);
-  if (accessState.hasProAccess) {
-    return;
-  }
-
-  const isBaseResume = type === 'base';
-  const { count, error: countError } = await supabase
-    .from('resumes')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('is_base_resume', isBaseResume);
-
-  if (countError) {
-    throw new Error('Failed to validate resume limits');
-  }
-
-  const limit = FREE_PLAN_RESUME_LIMITS[type];
-  if ((count ?? 0) >= limit) {
-    throw new Error(getResumeLimitExceededMessage(type));
-  }
+/**
+ * Flushes the cached dashboard/resume renders after a resume is created, copied or
+ * deleted. Without this a newly created resume does not show up on `/home` until some
+ * other mutation happens to revalidate the route.
+ */
+function revalidateResumeViews() {
+  revalidatePath('/', 'layout');
+  revalidatePath('/resumes', 'layout');
+  revalidatePath('/dashboard', 'layout');
+  revalidatePath('/resumes/base', 'layout');
+  revalidatePath('/resumes/tailored', 'layout');
 }
 
 
@@ -180,11 +150,7 @@ export async function deleteResume(resumeId: string): Promise<void> {
       throw new Error('Failed to delete resume');
     }
 
-    revalidatePath('/', 'layout');
-    revalidatePath('/resumes', 'layout');
-    revalidatePath('/dashboard', 'layout');
-    revalidatePath('/resumes/base', 'layout');
-    revalidatePath('/resumes/tailored', 'layout');
+    revalidateResumeViews();
     revalidatePath('/jobs', 'layout');
 
   } catch (error) {
@@ -217,8 +183,6 @@ export async function createBaseResume(
   if (error || !user) {
     throw new Error('User not authenticated');
   }
-
-  await assertResumeQuota(supabase, user.id, 'base');
 
   let profile = null;
   if (importOption !== 'fresh') {
@@ -296,6 +260,8 @@ export async function createBaseResume(
     throw new Error('Resume creation failed: No data returned');
   }
 
+  revalidateResumeViews();
+
   return resume;
 }
 
@@ -316,8 +282,6 @@ export async function createTailoredResume(
   if (userError || !user) {
     throw new Error('User not authenticated');
   }
-
-  await assertResumeQuota(supabase, user.id, 'tailored');
 
   // Fetch job description (if available) so we can generate a JD-aligned summary.
   let jobForSummary: { description: string | null; keywords: string[] | null } | null = null;
@@ -383,16 +347,17 @@ export async function createTailoredResume(
     .single();
 
   if (error) throw error;
+
+  revalidateResumeViews();
+
   return data;
 }
 
 /**
  * Re-runs tailoring for a resume that already exists, overwriting it in place.
  *
- * Unlike {@link createTailoredResume} this is an UPDATE, so the resume keeps its id,
- * URL and quota footprint — which is also why `assertResumeQuota` is deliberately not
- * called here (the resume count is unchanged, and a user at their limit must still be
- * able to regenerate a resume they already own).
+ * Unlike {@link createTailoredResume} this is an UPDATE, so the resume keeps its id and
+ * URL rather than showing up as a new card on the dashboard.
  *
  * Formatting (`document_settings`, `section_order`, `section_configs`), the title and
  * the contact fields are preserved; the AI-generated content is replaced. Any existing
@@ -504,8 +469,6 @@ export async function copyResume(resumeId: string): Promise<Resume> {
     throw new Error('Resume not found or access denied');
   }
 
-  await assertResumeQuota(supabase, user.id, sourceResume.is_base_resume ? 'base' : 'tailored');
-
   // Exclude auto-generated fields that shouldn't be copied
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, created_at: _created_at, updated_at: _updated_at, ...resumeDataToCopy } = sourceResume;
@@ -532,11 +495,7 @@ export async function copyResume(resumeId: string): Promise<Resume> {
     throw new Error('Resume creation failed: No data returned');
   }
 
-  revalidatePath('/', 'layout');
-  revalidatePath('/resumes', 'layout');
-  revalidatePath('/dashboard', 'layout');
-  revalidatePath('/resumes/base', 'layout');
-  revalidatePath('/resumes/tailored', 'layout');
+  revalidateResumeViews();
 
   return copiedResume;
 }
